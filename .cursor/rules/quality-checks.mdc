@@ -1,0 +1,75 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Quality Checks Workflow
+
+## When to Run Quality Checks
+- **After any code changes**: Before considering work complete
+- **Before committing**: Never commit code that fails checks
+- **During development**: Use `npm run test:unit:watch` for continuous feedback
+- **Before pull requests**: Run full suite to ensure integration
+
+## Quality Pipeline (Run in Order)
+
+### 1. **Format Code**: `npm run format`
+- Auto-fixes all Prettier formatting issues
+- Ensures consistent code style across project
+- **Always run first** - fixes spacing, quotes, semicolons
+
+### 2. **Lint Code**: `npm run lint`  
+- Identifies code quality issues and potential bugs
+- **Fix with**: `npm run lint:fix` for auto-fixable issues
+- **Manual fixes required** for complex linting errors
+
+### 3. **Type Check**: `npm run check`
+- Verifies TypeScript compilation and Svelte component types
+- **Critical**: Must pass before tests (tests won't run with type errors)
+- Ensures strict type safety throughout codebase
+
+### 4. **Unit Tests**: `npm run test:unit`
+- Runs Vitest tests for components and utilities  
+- **Fast feedback**: Should complete in <30 seconds
+- Tests individual component behavior and logic
+
+### 5. **Integration Tests**: `npm run test:integration`
+- Runs Playwright E2E tests for user workflows
+- **Slower**: Full browser automation, may take 1-2 minutes
+- Tests complete user journeys and API integration
+
+### 6. **Full Test Suite**: `npm run test`
+- Combines unit and integration tests
+- **Use for final validation** before commits
+
+## Quick Commands
+
+### Single Quality Check
+```bash
+npm run quality:check
+```
+Runs all checks in sequence: format → lint → type-check → tests
+
+### Development Workflow
+```bash
+npm run format && npm run lint:fix && npm run test:unit:watch
+```
+Set up continuous development feedback loop
+
+### Pre-commit Validation  
+```bash
+npm run quality:check
+```
+Ensure all quality gates pass before committing
+
+## Troubleshooting
+- **Format fails**: Usually due to file permissions or syntax errors
+- **Lint fails**: Run `npm run lint:fix` first, then manually fix remaining issues
+- **Type check fails**: Fix TypeScript errors before proceeding to tests
+- **Tests fail**: Address failing tests before making new changes
+
+## Quality Standards
+- **Zero tolerance**: All checks must pass before code is complete
+- **No shortcuts**: Don't skip checks even for "small" changes
+- **Continuous feedback**: Use watch mode during active development
+- **Team responsibility**: Every team member runs these checks

@@ -1,0 +1,46 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# TDD Rule
+
+- Always write unit tests and Playwright end-to-end tests for new features **before** writing implementation code.
+- Each component or function must have a corresponding test file.
+- Ensure tests cover edge cases and failure scenarios.
+# TDD (Test-Driven Development) Rules
+
+## Core Principle
+- **RED-GREEN-REFACTOR**: Write failing test → Make it pass → Improve code
+- Only implement logic after writing failing tests
+- Never write production code without a failing test first
+
+## TDD Workflow Steps
+1. **RED**: Write a failing test that describes desired behavior
+2. **GREEN**: Write the minimum code to make the test pass
+3. **REFACTOR**: Improve code while keeping tests green
+4. **REPEAT**: Continue cycle for next feature/requirement
+
+## Testing Requirements
+- **Unit Tests**: Every component, utility, and API client function
+- **Integration Tests**: User workflows and API interactions  
+- **Test File Naming**: `ComponentName.spec.ts` for units, `feature.test.ts` for E2E
+- **Test Location**: Next to source files or in parallel `tests/` directory
+
+## Examples
+```typescript
+// 1. RED: Write failing test first
+describe('SymbolSearch', () => {
+  it('should display search results for valid symbol', async () => {
+    // Test implementation here - will fail initially
+  });
+});
+
+// 2. GREEN: Implement minimum code to pass
+// 3. REFACTOR: Improve while keeping tests green
+```
+
+## Quality Gates
+- All new code must have corresponding tests
+- Tests must fail first, then pass after implementation
+- No code changes without running `npm run test:unit`

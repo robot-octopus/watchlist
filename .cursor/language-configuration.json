@@ -1,0 +1,12 @@
+{
+  "contributes": {
+    "languages": [
+      {
+        "id": "svelte",
+        "aliases": ["Svelte", "svelte"],
+        "extensions": [".svelte"],
+        "configuration": "./svelte-language-configuration.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "info": { "title": "Sessions and Users", "version": "5.68.1" },
+  "swagger": "2.0",
+  "produces": ["application/json"],
+  "host": "api.tastyworks.com",
+  "tags": [
+    {
+      "name": "sessions",
+      "description": "Allows an API client to interact with their session, or create a new one."
+    }
+  ],
+  "paths": {
+    "/sessions": {
+      "post": {
+        "description": "Create a new user session.",
+        "produces": ["application/json"],
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "name": "postSessions",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/postSessions" }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Create a new user session.",
+            "schema": { "$ref": "#/definitions/SessionResponse" }
+          }
+        },
+        "tags": ["sessions"],
+        "operationId": "postSessions"
+      }
+    }
+  },
+  "definitions": {
+    "postSessions": {
+      "type": "object",
+      "properties": {
+        "login": { "type": "string", "description": "The user name or email of the user." },
+        "password": { "type": "string", "description": "The password for the user's account" },
+        "remember-me": {
+          "type": "boolean",
+          "description": "If the session should be extended for longer than normal via remember token.\n                                        Defaults to `false`. ",
+          "default": false
+        },
+        "remember-token": {
+          "type": "string",
+          "description": "The remember token. Allows skipping for 2 factor with in its window"
+        }
+      },
+      "required": ["login"],
+      "description": "Create a new user session."
+    },
+    "SessionResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "email": { "description": "", "type": "string" },
+            "external-id": { "description": "", "type": "string" },
+            "is-confirmed": { "description": "", "type": "string" },
+            "is-two-factor-sessions-enforced": { "description": "", "type": "string" },
+            "name": { "description": "", "type": "string" },
+            "nickname": { "description": "", "type": "string" },
+            "username": { "description": "", "type": "string" }
+          },
+          "description": ""
+        },
+        "remember-token": { "description": "", "type": "string" },
+        "session-expiration": { "description": "", "type": "string" },
+        "session-token": { "description": "", "type": "string" }
+      },
+      "description": "SessionResponse model"
+    }
+  }
+}

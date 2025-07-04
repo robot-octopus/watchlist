@@ -1,0 +1,33 @@
+# Project Overview
+
+Tastytrade Watchlist App built with SvelteKit and TypeScript. 
+Key features:
+- Login with API token (placeholder)
+# Tastytrade Watchlist App - Project Overview
+
+## Tech Stack
+- **Frontend**: SvelteKit 2.5+ with TypeScript (strict mode)
+- **Validation**: Zod schemas with Felte form handling  
+- **API**: Tastytrade OpenAPI specs with generated TypeScript types
+- **Testing**: Vitest (unit) + Playwright (E2E) + Testing Library
+- **Quality**: ESLint + Prettier + TypeScript strict + TDD workflow
+
+## Core Features
+- Symbol search with autocomplete using Tastytrade API
+- Add/remove symbols to/from personal watchlists
+- Live quotes using WebSocket streaming (real-time data)
+- Minimalist financial dashboard UI with modern UX
+- Full type safety with OpenAPI-generated client types
+
+## Project Constraints  
+- **AI-first development**: Write tests before implementation
+- **No deployment setup**: Local development only
+- **No external state libraries**: Use Svelte stores exclusively
+- **Type safety**: No `any` types, strict TypeScript throughout
+- **API Integration**: Use generated types from OpenAPI specs in `api_spec/`
+
+## Development Workflow
+1. Write failing tests first (TDD)
+2. Implement minimum code to pass tests
+3. Run quality checks (`npm run quality:check`)
+4. Refactor with tests as safety net

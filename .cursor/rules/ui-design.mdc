@@ -1,0 +1,259 @@
+# 🚨 MANDATORY UI Framework Setup & Usage Rules
+
+## ⚠️ CRITICAL REQUIREMENTS - MUST FOLLOW
+
+### 1. Tailwind CSS Setup (REQUIRED)
+**MUST HAVE these exact imports in `src/app.css` (FIRST 3 LINES):**
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+**❌ FORBIDDEN**: Writing custom CSS that duplicates Tailwind utilities
+- ❌ NO custom `.container`, `.grid`, `.flex` classes
+- ❌ NO custom responsive breakpoints (use `sm:`, `md:`, `lg:`, `xl:`)
+- ❌ NO custom spacing utilities (use `p-4`, `m-2`, `gap-4`, etc.)
+- ❌ NO custom color utilities (use `bg-blue-500`, `text-red-600`, etc.)
+
+### 2. Skeleton UI Integration (REQUIRED)
+**MUST import Skeleton styles in `src/routes/+layout.svelte`:**
+```svelte
+<script>
+  import '@skeletonlabs/skeleton/styles/skeleton.css';
+  import '../app.css';
+</script>
+```
+
+**MUST configure Skeleton plugin in `tailwind.config.js`:**
+```javascript
+import { skeleton } from '@skeletonlabs/tw-plugin';
+
+export default {
+  content: [
+    './src/**/*.{html,js,svelte,ts}',
+    require('path').join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}')
+  ],
+  plugins: [skeleton()],
+  // ... rest of config
+};
+```
+
+### 3. Component Styling Rules (MANDATORY)
+**✅ ALWAYS USE Skeleton classes for components:**
+- Tables: `table table-hover` (NOT custom `.table-financial`)
+- Cards: `card` (NOT custom `.card`)
+- Buttons: `btn variant-filled-primary` (NOT custom `.btn-primary`)
+- Forms: `input` (NOT custom `.input`)
+
+**✅ ALWAYS USE Tailwind utilities for layout:**
+- Spacing: `p-4`, `m-2`, `gap-6` (NOT custom CSS)
+- Typography: `text-lg`, `font-bold` (NOT custom font sizes)
+- Colors: `bg-blue-500`, `text-red-600` (NOT custom color variables)
+- Responsive: `md:grid-cols-2`, `lg:p-8` (NOT custom media queries)
+
+## 🎯 Required Implementation Patterns
+
+### Financial Data Display
+```svelte
+<!-- ✅ CORRECT: Skeleton + Tailwind + minimal custom -->
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Symbol</th>
+      <th class="text-right">Price</th>
+      <th class="text-right">Change</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="font-semibold text-primary-600">{symbol}</td>
+      <td class="text-right font-mono">{formatPrice(price)}</td>
+      <td class="text-right font-mono {getChangeClass(change)}">
+        {formatChange(change)}
+      </td>
+    </tr>
+  </tbody>
+</table>
+```
+
+### Buttons
+```svelte
+<!-- ✅ CORRECT: Use Skeleton button variants -->
+<button class="btn variant-filled-primary">Add to Watchlist</button>
+<button class="btn variant-ghost-surface">Cancel</button>
+<button class="btn variant-filled-error">Remove</button>
+
+<!-- ❌ WRONG: Custom button classes -->
+<button class="btn-primary">Add to Watchlist</button>
+```
+
+### Forms
+```svelte
+<!-- ✅ CORRECT: Skeleton form components -->
+<input class="input" type="text" placeholder="Enter symbol" />
+<select class="select">
+  <option>Choose option</option>
+</select>
+
+<!-- ❌ WRONG: Custom form styling -->
+<input class="form-input" />
+```
+
+### Cards
+```svelte
+<!-- ✅ CORRECT: Skeleton card with Tailwind utilities -->
+<div class="card p-6">
+  <header class="card-header">
+    <h2 class="text-xl font-bold">Watchlist</h2>
+  </header>
+  <section class="p-4">
+    <!-- Content -->
+  </section>
+</div>
+
+<!-- ❌ WRONG: Custom card classes -->
+<div class="custom-card">
+  <div class="card-header">
+```
+
+## 📋 Pre-Development Checklist
+
+**Before writing ANY component, verify:**
+- [ ] `src/app.css` starts with the 3 Tailwind directives
+- [ ] Skeleton styles are imported in layout
+- [ ] `tailwind.config.js` includes Skeleton plugin
+- [ ] No custom CSS that duplicates framework features
+
+**When styling components:**
+- [ ] Used Skeleton component classes (table, card, btn, input)
+- [ ] Used Tailwind utilities for spacing/typography/colors
+- [ ] No custom CSS in `<style>` blocks for basic layout
+- [ ] Responsive design uses Tailwind breakpoints
+
+## 🚫 ABSOLUTE PROHIBITIONS
+
+### Never Write These in Custom CSS:
+```css
+/* ❌ FORBIDDEN - Use Tailwind utilities instead */
+.container { max-width: 1200px; margin: 0 auto; }
+.grid { display: grid; gap: 2rem; }
+.card { background: white; border: 1px solid #e5e7eb; }
+.btn { padding: 0.5rem 1rem; border-radius: 6px; }
+.input { width: 100%; padding: 0.5rem; }
+
+/* ❌ FORBIDDEN - Use Tailwind responsive utilities */
+@media (min-width: 768px) { 
+  .grid { grid-template-columns: 1fr 1fr; }
+}
+```
+
+### Only Allow Custom CSS For:
+```css
+/* ✅ ALLOWED: Financial-specific semantics */
+@layer components {
+  .price-positive {
+    @apply text-green-600 font-semibold;
+  }
+  .price-negative {
+    @apply text-red-600 font-semibold;
+  }
+  .price-neutral {
+    @apply text-gray-600 font-semibold;
+  }
+}
+```
+
+## 🔍 Validation Commands
+
+**Before committing, run these checks:**
+```bash
+# Verify Tailwind directives exist
+grep -q "@tailwind base" src/app.css && echo "✅ Tailwind base found" || echo "❌ Missing @tailwind base"
+
+# Check for forbidden custom classes
+grep -n "\.container\|\.grid\|\.btn\s*{" src/app.css && echo "❌ Found forbidden custom classes" || echo "✅ No forbidden classes"
+
+# Verify Skeleton import
+grep -q "@skeletonlabs/skeleton" src/routes/+layout.svelte && echo "✅ Skeleton imported" || echo "❌ Missing Skeleton import"
+```
+
+## 🎨 Approved Design System
+
+### Colors (ONLY use these)
+```svelte
+<!-- Financial colors -->
+<span class="text-green-600">+$123.45</span>  <!-- Gains -->
+<span class="text-red-600">-$45.67</span>     <!-- Losses -->
+<span class="text-gray-600">$0.00</span>      <!-- Neutral -->
+
+<!-- Skeleton theme colors -->
+<div class="bg-surface-100 text-surface-900">
+<button class="btn variant-filled-primary">
+<div class="text-primary-500">
+```
+
+### Typography
+```svelte
+<!-- Headings -->
+<h1 class="text-3xl font-bold">Main Title</h1>
+<h2 class="text-xl font-semibold">Section</h2>
+<h3 class="text-lg font-medium">Subsection</h3>
+
+<!-- Financial data -->
+<span class="font-mono tabular-nums">$123,456.78</span>
+```
+
+### Spacing
+```svelte
+<!-- Layout spacing -->
+<div class="p-6">          <!-- Padding -->
+<div class="m-4">          <!-- Margin -->
+<div class="space-y-4">    <!-- Vertical spacing -->
+<div class="gap-6">        <!-- Grid/flex gap -->
+```
+
+## 🚀 Quick Setup Verification
+
+**If setting up new project or fixing existing:**
+
+1. **Fix app.css (FIRST):**
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .price-positive { @apply text-green-600 font-semibold; }
+  .price-negative { @apply text-red-600 font-semibold; }
+  .price-neutral { @apply text-gray-600 font-semibold; }
+}
+```
+
+2. **Update tailwind.config.js:**
+```javascript
+import { skeleton } from '@skeletonlabs/tw-plugin';
+export default {
+  content: ['./src/**/*.{html,js,svelte,ts}', 
+           require('path').join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}')],
+  plugins: [skeleton()],
+  theme: { extend: { /* your extensions */ } }
+};
+```
+
+3. **Import in layout:**
+```svelte
+<script>
+  import '@skeletonlabs/skeleton/styles/skeleton.css';
+  import '../app.css';
+</script>
+```
+
+4. **Remove ALL custom CSS that duplicates framework features**
+
+## 🎯 Framework Priority Order
+1. **Skeleton UI components** (table, card, btn, input) - Use FIRST
+2. **Tailwind utilities** (spacing, colors, typography) - Use SECOND  
+3. **Custom CSS** (financial semantics only) - Use SPARINGLY
+
+**Remember: If Skeleton or Tailwind provides it, DO NOT recreate it in custom CSS!**

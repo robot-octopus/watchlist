@@ -1,0 +1,97 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Testing Standards
+
+- Use Vitest for unit tests and Playwright for E2E tests.
+- Place test files next to the components or in a parallel `tests/` folder.
+- Use Testing Library for component testing.
+# Testing Standards & Guidelines
+
+## Testing Philosophy
+- **Test behavior, not implementation**: Focus on what users see and do
+- **Arrange-Act-Assert pattern**: Set up → Execute → Verify results
+- **Test edge cases**: Error states, loading states, empty data
+- **Mock external dependencies**: APIs, WebSockets, localStorage
+
+## Test Organization
+```
+src/lib/components/
+├── SymbolSearch.svelte
+├── SymbolSearch.spec.ts          # Unit tests next to component
+├── WatchlistTable.svelte
+└── WatchlistTable.spec.ts
+
+tests/
+├── watchlist-management.test.ts   # E2E user workflows
+└── symbol-search.test.ts          # E2E search functionality
+```
+
+## Unit Testing with Vitest
+```typescript
+import { render, fireEvent } from '@testing-library/svelte';
+import { describe, it, expect, vi } from 'vitest';
+import { api } from '$lib/api';
+import SymbolSearch from './SymbolSearch.svelte';
+
+// Mock API calls
+vi.mock('$lib/api', () => ({
+  api: {
+    symbols: {
+      search: vi.fn()
+    }
+  }
+}));
+
+describe('SymbolSearch', () => {
+  it('should display search results when user types', async () => {
+    // Arrange: Mock API response
+    vi.mocked(api.symbols.search).mockResolvedValue([
+      { symbol: 'AAPL', description: 'Apple Inc.' }
+    ]);
+
+    // Act: Render and interact
+    const { getByRole, findByText } = render(SymbolSearch);
+    await fireEvent.input(getByRole('textbox'), { target: { value: 'AAPL' } });
+
+    // Assert: Verify behavior
+    expect(await findByText('Apple Inc.')).toBeInTheDocument();
+  });
+});
+```
+
+## E2E Testing with Playwright
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('user can search for symbols and add to watchlist', async ({ page }) => {
+  await page.goto('/');
+  
+  // Search for symbol
+  await page.fill('[placeholder="Search symbols..."]', 'AAPL');
+  await page.click('text=Apple Inc.');
+  
+  // Add to watchlist
+  await page.click('button:has-text("Add to Watchlist")');
+  
+  // Verify addition
+  await expect(page.locator('table')).toContainText('AAPL');
+});
+```
+
+## Testing Checklist
+- [ ] Component renders without errors
+- [ ] User interactions work correctly
+- [ ] Loading and error states are handled
+- [ ] API calls are mocked appropriately
+- [ ] Edge cases are covered (empty data, network errors)
+- [ ] Accessibility features work (screen readers, keyboard navigation)
+
+## Quality Requirements
+- Always run `npm run test:unit` after component changes
+- Run `npm run test:integration` for full E2E validation
+- All tests must pass before code is considered ready
+- Maintain >80% code coverage for critical paths
+- Use descriptive test names that explain the scenario

@@ -1,0 +1,334 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Feature Planning Rule - DOCUMENTATION ONLY
+
+## 🎯 PURPOSE: PLANNING DOCUMENTATION ONLY - NO IMPLEMENTATION
+
+This rule is activated ONLY to create planning documents. It should NEVER write any code or implement features.
+
+## 🚨 CRITICAL: NO CODE IMPLEMENTATION
+- DO NOT write any `.svelte` files
+- DO NOT write any `.ts` files  
+- DO NOT write any implementation code
+- DO NOT modify existing components
+- ONLY create planning documentation in `docs/features/`
+
+## ⚡ Activation Triggers
+- `@plan [feature description]`
+- `plan: [feature description]`
+- `create a plan for [feature description]`
+- `feature plan: [feature description]`
+
+## 📋 When Triggered, Create ONLY:
+1. A single markdown file in `docs/features/[FEATURE-NAME]-plan.md`
+2. Update `docs/features/README.md` to list the new plan
+3. Nothing else - no code, no components, no implementation
+
+## 📄 Plan Document Template
+
+Create file: `docs/features/[FEATURE-NAME]-plan.md`
+
+```markdown
+# [Feature Name] - Implementation Plan
+
+> **Status**: 📋 Planning Phase  
+> **Created**: [Current Date]  
+> **Complexity**: [Simple/Medium/Complex]  
+> **Priority**: [High/Medium/Low]
+
+## 🎯 Feature Overview
+
+### User Story
+**As a** [user type]  
+**I want** [goal/desire]  
+**So that** [benefit/value]
+
+### Acceptance Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+### Success Metrics
+- How will we measure success?
+- What are the key performance indicators?
+
+## 🏗️ Technical Architecture
+
+### Components to Create
+- `ComponentName.svelte` - Purpose and responsibility
+- `AnotherComponent.svelte` - Purpose and responsibility
+
+### API Integration
+- **Endpoints**: Required API endpoints
+- **Data Flow**: Request → Processing → Response → UI Update
+- **Error Handling**: Network failures, validation errors, timeout handling
+
+### State Management
+- **Local State**: Component-specific reactive variables using `$state()`
+- **Global Store**: Shared state using Svelte stores (if needed)
+- **Derived State**: Computed values using `$derived()`
+
+### Type Definitions
+```typescript
+// Expected type structures
+interface FeatureData {
+  // Define data structure
+}
+```
+
+## 🎨 UI/UX Design
+
+### Skeleton UI Components
+- `table table-hover` for data tables
+- `btn variant-filled-primary` for primary actions
+- `btn variant-ghost-surface` for secondary actions  
+- `card` for content grouping
+- `input` for form fields
+- `select` for dropdowns
+
+### Tailwind CSS Strategy
+- **Layout**: Grid/Flexbox patterns to use
+- **Responsive**: Mobile-first breakpoint strategy
+- **Colors**: Use project palette (profit/loss/neutral)
+- **Typography**: Text scales and font weights
+- **Spacing**: Consistent spacing patterns
+
+### User Experience Flow
+1. User enters feature
+2. User interacts with interface
+3. System processes request
+4. User receives feedback
+5. User completes workflow
+
+### Accessibility Requirements
+- [ ] Keyboard navigation support
+- [ ] Screen reader compatibility  
+- [ ] ARIA labels and descriptions
+- [ ] Focus management
+- [ ] Color contrast compliance
+- [ ] Alternative text for images
+
+## 🧪 Testing Strategy
+
+### Unit Tests (`*.spec.ts`)
+```typescript
+describe('ComponentName', () => {
+  it('should render initial state correctly', () => {
+    // Test case planning
+  });
+  
+  it('should handle user interactions', () => {
+    // Test case planning
+  });
+  
+  it('should display error states', () => {
+    // Test case planning
+  });
+});
+```
+
+### Integration Tests (`tests/*.spec.ts`)
+```typescript
+test('user can complete [feature] workflow', async ({ page }) => {
+  // E2E test scenario planning
+  // 1. Navigate to feature
+  // 2. Perform actions
+  // 3. Verify results
+});
+```
+
+### Visual Regression Tests
+- [ ] Component screenshots in different states
+- [ ] Responsive breakpoint screenshots  
+- [ ] Dark/light mode variations
+- [ ] Error state screenshots
+
+### Test Data Requirements
+- Mock API responses
+- Sample user data
+- Edge case scenarios
+
+## 📈 Implementation Phases
+
+### Phase 1: Core Functionality (TDD)
+**Estimated Effort**: [X hours/days]
+
+1. **Setup Test Framework**
+   - Create test files
+   - Setup mock data
+   - Configure test environment
+
+2. **Implement Core Logic**
+   - Write failing tests
+   - Implement minimal functionality
+   - Ensure tests pass
+
+3. **API Integration**
+   - Connect to required endpoints
+   - Handle success/error responses
+   - Implement loading states
+
+### Phase 2: UI Enhancement
+**Estimated Effort**: [X hours/days]
+
+1. **Skeleton UI Integration**
+   - Apply design system components
+   - Ensure consistent styling
+   - Implement responsive design
+
+2. **Accessibility Implementation**
+   - Add ARIA labels
+   - Implement keyboard navigation
+   - Test with screen readers
+
+3. **Visual Polish**
+   - Animations and transitions
+   - Loading indicators
+   - Error state styling
+
+### Phase 3: Testing & Polish
+**Estimated Effort**: [X hours/days]
+
+1. **Comprehensive Testing**
+   - Visual regression tests
+   - E2E workflow testing
+   - Performance testing
+
+2. **Edge Case Handling**
+   - Network failure scenarios
+   - Data validation edge cases
+   - Browser compatibility
+
+3. **Documentation & Deployment**
+   - Update component documentation
+   - Integration testing
+   - Production deployment
+
+## 📁 File Structure Plan
+```
+src/lib/components/[FeatureName]/
+├── ComponentName.svelte
+├── ComponentName.spec.ts
+├── SubComponent.svelte
+├── SubComponent.spec.ts
+└── index.ts
+
+src/lib/api/clients/
+├── feature-name-client.ts
+
+src/lib/stores/
+├── featureStore.ts
+
+src/lib/types/
+├── feature-types.ts
+
+tests/
+├── feature-name-workflow.spec.ts
+```
+
+## ⚠️ Risks & Considerations
+
+### Technical Risks
+- Potential performance issues
+- Browser compatibility concerns
+- API rate limiting
+
+### UX Risks  
+- Complex user workflow
+- Accessibility challenges
+- Mobile usability issues
+
+### Mitigation Strategies
+- How to address each identified risk
+- Fallback plans and alternatives
+
+## ✅ Definition of Done
+
+### Code Quality
+- [ ] All tests passing (`pnpm run test`)
+- [ ] TypeScript compilation clean (`pnpm run check`)
+- [ ] ESLint rules satisfied (`pnpm run lint`)
+- [ ] Code formatted (`pnpm run format`)
+
+### Functionality
+- [ ] All acceptance criteria met
+- [ ] Error handling implemented
+- [ ] Loading states handled
+- [ ] Responsive design working
+
+### Accessibility
+- [ ] WCAG 2.1 AA compliance
+- [ ] Keyboard navigation functional
+- [ ] Screen reader compatibility
+- [ ] Color contrast verified
+
+### Testing
+- [ ] Unit test coverage >80%
+- [ ] E2E tests covering main workflows
+- [ ] Visual regression tests created
+- [ ] Cross-browser testing completed
+
+### Documentation
+- [ ] Component documentation updated
+- [ ] API documentation updated  
+- [ ] README updated with new features
+- [ ] Migration guide (if needed)
+
+---
+
+**Next Steps**: 
+1. Review and approve this plan
+2. Break down into development tasks
+3. Begin implementation using TDD approach
+4. Regular check-ins against acceptance criteria
+
+*This is a planning document only. Implementation should follow TDD methodology starting with test creation.*
+```
+
+## 📝 Plan Registry Update
+
+When creating a new plan, also update `docs/features/README.md`:
+
+```markdown
+## Current Feature Plans
+
+### 📋 Planning Phase
+- [Feature Name](mdc:FEATURE-NAME-plan.md) - Brief description
+
+### 🔨 In Development  
+- (Move plans here when implementation begins)
+
+### ✅ Completed
+- (Archive completed features here)
+```
+
+## 🎯 Usage Examples
+
+### Correct Usage:
+```
+@plan add real-time price streaming to watchlist table
+```
+
+### Expected Output:
+- Creates: `docs/features/realtime-price-streaming-plan.md`
+- Updates: `docs/features/README.md`
+- Does NOT create any code files
+- Does NOT modify existing components
+
+### What NOT to Do:
+❌ Do not implement any actual code  
+❌ Do not create `.svelte` files  
+❌ Do not create `.ts` implementation files  
+❌ Do not modify existing components  
+
+## 🔄 Planning-to-Implementation Workflow
+
+1. **Planning Phase**: Use `@plan` → Creates documentation only
+2. **Review Phase**: Team reviews the plan document  
+3. **Implementation Phase**: Separate conversation for actual coding
+4. **Update Phase**: Mark plan as "In Development" in README
+
+This ensures clear separation between planning and implementation phases.

@@ -1,0 +1,97 @@
+# Coding Style
+
+- Use semantic variable, function, and file names.
+- No inline comments – code must be self-documenting.
+- Consistent formatting via Prettier or ESLint.
+# Coding Style
+
+- Use semantic variable, function, and file names.
+- No inline comments – code must be self-documenting.
+- Consistent formatting via Prettier or ESLint.
+# Coding Style & Conventions
+
+## General Principles
+- Use semantic variable, function, and file names
+- No inline comments – code must be self-documenting
+- Prefer explicit over implicit (clear intent over cleverness)
+- Maintain strict TypeScript configuration - no `any` types allowed
+
+## SvelteKit Conventions
+- Use `$lib/` imports for internal modules: `import { api } from '$lib/api'`
+- Place reusable logic in `src/lib/` directory
+- Use proper SvelteKit routing with `+page.svelte` and `+layout.svelte`
+- Follow SvelteKit naming conventions for routes and components
+
+## Tailwind CSS Guidelines
+- **Use component classes** from `app.css` for common patterns:
+  ```svelte
+  <button class="btn-primary">Submit</button>
+  <div class="card">
+    <div class="card-header">Title</div>
+    <div class="card-body">Content</div>
+  </div>
+  ```
+- **Financial data styling**:
+  ```svelte
+  <span class="price-positive">+$2.34</span>  <!-- Green for gains -->
+  <span class="price-negative">-$1.23</span>  <!-- Red for losses -->
+  <span class="text-financial">$123.45</span> <!-- Tabular numbers -->
+  ```
+- **Form components**: Use `.form-input`, `.form-select` classes
+- **Responsive design**: Mobile-first with `sm:`, `md:`, `lg:` prefixes
+- **Color consistency**: Use custom financial colors (`gain`, `loss`, `neutral`)
+
+## Import Organization
+```typescript
+// 1. External libraries
+import { onMount } from 'svelte';
+import { z } from 'zod';
+
+// 2. Internal libraries ($lib imports)
+import { api } from '$lib/api';
+import type { SymbolData } from '$lib/api';
+
+// 3. Relative imports
+import ChildComponent from './ChildComponent.svelte';
+```
+
+## TypeScript Standards
+- Use `type` for type-only imports: `import type { ApiResponse } from '$lib/api'`
+- Prefer interfaces for object shapes, types for unions/primitives
+- Use strict null checks and optional chaining
+- Define proper return types for all functions
+
+## Component Structure
+```svelte
+<script lang="ts">
+  // 1. Imports
+  // 2. Props with proper typing
+  // 3. Local state
+  // 4. Lifecycle functions
+  // 5. Event handlers
+  // 6. Reactive statements
+</script>
+
+<!-- Template with semantic HTML and Tailwind classes -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="text-lg font-medium">Title</h2>
+  </div>
+  <div class="card-body">
+    <!-- Content with consistent spacing -->
+  </div>
+</div>
+
+<style>
+  /* Only use custom CSS for animations or complex layouts */
+  /* Prefer Tailwind utility classes over custom styles */
+</style>
+```
+
+## Code Quality
+- Always run `npm run format` before committing code
+- Fix all ESLint warnings and errors with `npm run lint:fix`
+- Use Zod for all data validation and schema definitions
+- Prefer composition over inheritance
+- Keep functions small and focused (single responsibility)
+- Use Tailwind's design system for consistent spacing and colors

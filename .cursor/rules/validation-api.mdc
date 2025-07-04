@@ -1,0 +1,47 @@
+# API + Validation Rules
+
+- Validate all form inputs using Zod.
+- Use OpenAPI-generated types for request/response contracts.
+- Handle fetch errors gracefully and surface minimal user-friendly errors.
+# API Integration & Validation Rules
+
+## API Type Safety
+- Use OpenAPI-generated types from `src/lib/api/types/` exclusively
+- Never create manual interface definitions for API responses
+- Regenerate types with `npm run generate:types` when API specs change
+- Import types: `import type { SymbolData } from '$lib/api'`
+
+## Validation Strategy
+- **Frontend Validation**: Use Zod schemas for all form inputs and user data
+- **API Validation**: Use OpenAPI-generated types for request/response contracts
+- **Runtime Validation**: Validate API responses against generated types
+- **Error Boundaries**: Handle API errors gracefully with user-friendly messages
+
+## API Client Usage
+```typescript
+// Use generated API clients, not raw fetch
+import { api } from '$lib/api';
+
+// Type-safe API calls
+const symbols = await api.symbols.search('AAPL');
+const watchlist = await api.watchlists.createWatchlist(data);
+```
+
+## Error Handling
+- Catch `TastytradeApiError` specifically for API failures
+- Display minimal, user-friendly error messages
+- Log detailed errors for debugging but don't expose to users
+- Implement retry logic for transient failures
+- Use proper HTTP status code handling
+
+## Form Validation
+- Define Zod schemas in `src/lib/schemas/`
+- Use Felte with Zod integration for form handling
+- Validate all inputs before API submission
+- Provide real-time validation feedback to users
+
+## API Configuration
+- Store API base URL and tokens in environment variables
+- Use the centralized `TastytradeApiClient` for all API calls
+- Configure proper timeout and retry policies
+
