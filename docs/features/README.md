@@ -132,3 +132,136 @@ Each plan must include:
 ---
 
 **Note**: This planning system ensures thorough documentation before implementation, reducing development time and improving code quality through structured thinking and TDD methodology.
+
+## 📋 Feature Plans Index
+
+This directory contains comprehensive feature plans created using AI-assisted development workflows.
+
+### 🟢 Active Plans
+
+- [**Authentication Route Protection**](./auth-route-protection.md) - Implement comprehensive route protection ensuring unauthenticated users can only access the login page _(Status: Planned)_
+- [**Authentication Login Prompt**](./auth-login-prompt.md) - Enhanced login form with validation and error handling _(Status: Completed)_
+
+### 🟡 In Progress
+
+- None currently
+
+### 🔴 Archived Plans
+
+- See [archived/](./archived/) directory for completed feature plans
+
+### 📊 Plan Status Overview
+
+- **Total Plans**: 2
+- **Active**: 1
+- **In Progress**: 0
+- **Completed**: 1
+- **Archived**: 0
+
+---
+
+## 🎯 Planning Workflow
+
+### Planning Process
+
+1. **Identify Need**: Recognize feature requirement or enhancement
+2. **Create Plan**: Use `@plan [description]` command to generate comprehensive documentation
+3. **Review**: Team reviews technical approach and requirements
+4. **Approve**: Mark plan as approved and ready for implementation
+5. **Implement**: Follow TDD workflow in separate development session
+6. **Complete**: Update status and move to archived when finished
+
+### Plan Template Structure
+
+Each plan includes:
+
+- **Feature Overview**: Goal, priority, effort estimation
+- **Success Criteria**: Measurable outcomes and acceptance criteria
+- **Technical Architecture**: Components, data flow, and system design
+- **Implementation Strategy**: Phased approach with detailed steps
+- **Testing Strategy**: Unit, integration, and E2E test requirements
+- **Security Considerations**: Auth, validation, and protection measures
+- **Performance Considerations**: Optimization and monitoring requirements
+- **Deployment Checklist**: Pre/post deployment validation steps
+
+### Status Definitions
+
+- **Planned**: Plan created and under review
+- **Approved**: Plan approved and ready for implementation
+- **In Progress**: Currently being implemented
+- **Completed**: Implementation finished and tested
+- **Archived**: Completed plans moved to historical record
+
+---
+
+## 🚀 Implementation Guidelines
+
+### Development Approach
+
+- **Documentation First**: Always create comprehensive plan before coding
+- **TDD Workflow**: Write tests before implementation
+- **Incremental Delivery**: Break large features into smaller, deliverable phases
+- **Quality Gates**: All plans must pass review and testing requirements
+
+### Code Standards
+
+- **TypeScript**: Strict mode compliance required
+- **Testing**: 90%+ coverage for all new features
+- **Documentation**: Update relevant docs with each implementation
+- **Security**: Security review required for auth-related features
+
+### Review Process
+
+- **Technical Review**: Architecture and implementation approach
+- **Security Review**: For authentication and data handling features
+- **UX Review**: For user-facing features and interactions
+- **Performance Review**: For features affecting app performance
+
+---
+
+## 📈 Metrics and Tracking
+
+### Plan Metrics
+
+- **Planning Time**: Average time from request to plan completion
+- **Implementation Time**: Average time from plan approval to delivery
+- **Plan Quality**: Reduction in implementation issues and scope creep
+- **Team Velocity**: Features delivered per sprint
+
+### Success Indicators
+
+- **Reduced Planning Overhead**: Less time spent on architectural decisions
+- **Improved Code Quality**: Fewer bugs and technical debt
+- **Better Estimates**: More accurate effort estimation
+- **Team Alignment**: Clearer understanding of requirements and approach
+
+---
+
+## 🔧 Tools and Resources
+
+### Planning Commands
+
+- `@plan [description]` - Create comprehensive feature plan
+- Review generated plan document
+- Update plan status in this README
+- Begin implementation in separate session
+
+### Documentation Standards
+
+- Use clear, actionable language
+- Include code examples and pseudocode
+- Provide specific acceptance criteria
+- Document security and performance considerations
+
+### Templates
+
+- **Feature Plan Template**: Standardized structure for all plans
+- **Testing Strategy Template**: Comprehensive testing approach
+- **Security Review Template**: Security considerations checklist
+- **Performance Review Template**: Performance optimization guidelines
+
+---
+
+**Last Updated**: [Current Date]  
+**Maintained By**: Development Team  
+**Review Schedule**: Weekly during sprint planning

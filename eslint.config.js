@@ -23,6 +23,8 @@ export default [
         process: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        localStorage: 'readonly',
+        window: 'readonly',
       },
     },
     rules: {
@@ -53,6 +55,7 @@ export default [
         clearInterval: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        localStorage: 'readonly',
       },
     },
     rules: {
@@ -69,6 +72,8 @@ export default [
     languageOptions: {
       globals: {
         process: 'readonly',
+        localStorage: 'readonly',
+        window: 'readonly',
       },
     },
   },

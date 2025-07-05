@@ -42,6 +42,8 @@
 
     try {
       await authStore.login(credentials);
+      // Note: Post-login redirect is handled automatically by the layout component
+      // based on the intendedDestination in the auth store
     } catch (error) {
       console.error('Login failed:', error);
     }
@@ -68,6 +70,17 @@
     <div class="text-center mb-8">
       <h1 class="text-3xl font-bold text-surface-900-50-token mb-2">Welcome Back</h1>
       <p class="text-surface-600-300-token">Sign in to your Tastytrade account</p>
+
+      <!-- Show intended destination if available -->
+      {#if authState.intendedDestination}
+        <div
+          class="mt-3 p-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-500/30 rounded-lg"
+        >
+          <p class="text-sm text-primary-700 dark:text-primary-300">
+            You'll be redirected to <strong>{authState.intendedDestination}</strong> after signing in
+          </p>
+        </div>
+      {/if}
     </div>
 
     <!-- Login Form -->
