@@ -35,7 +35,6 @@
   onclick={toggleTheme}
   class="btn btn-sm bg-transparent border-none w-10 h-10 p-0"
   aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-  role="button"
   tabindex="0"
 >
   <img

@@ -1,10 +1,10 @@
 <script lang="ts">
   import { createForm } from 'felte';
   import { validator } from '@felte/validator-zod';
-  import { addSymbolSchema, AddSymbolData } from '$lib/schemas/symbol';
+  import { addSymbolSchema } from '$lib/schemas/symbol';
   import { reporter, ValidationMessage } from '@felte/reporter-svelte';
 
-  const { form } = createForm<AddSymbolData>({
+  const { form } = createForm({
     extend: [validator({ schema: addSymbolSchema }), reporter()],
     onSubmit: (values) => {
       console.log('Adding symbol', values.symbol);

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
   import WatchlistTable from '$lib/components/WatchlistTable.svelte';
   import AddSymbolForm from '$lib/components/AddSymbolForm.svelte';
   import { createQuoteStream } from '$lib/streaming/streamQuotes';
@@ -13,15 +14,17 @@
   let quotes: Record<string, QuoteData> = {};
 
   onMount(() => {
-    // Mock symbols for now (will integrate with stores later)
-    const mockSymbols = ['AAPL', 'GOOGL', 'MSFT'];
-    const quoteStream = createQuoteStream(mockSymbols);
+    if (browser) {
+      // Mock symbols for now (will integrate with stores later)
+      const mockSymbols = ['AAPL', 'GOOGL', 'MSFT'];
+      const quoteStream = createQuoteStream(mockSymbols);
 
-    const unsubscribe = quoteStream.subscribe((data) => {
-      quotes = data;
-    });
+      const unsubscribe = quoteStream.subscribe((data) => {
+        quotes = data;
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    }
   });
 
   $: quoteArray = Object.values(quotes) as QuoteData[];
@@ -49,7 +52,7 @@
 
     <div class="w-full">
       <div data-testid="quotes-section">
-        <WatchlistTable />
+        <WatchlistTable symbols={quoteArray} />
       </div>
     </div>
   </div>
