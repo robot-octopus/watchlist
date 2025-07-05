@@ -15,17 +15,16 @@ describe('OAuth2Client', () => {
   });
 
   it('should authenticate with valid credentials', async () => {
-    const mockResponse: OAuthTokenResponse = {
-      access_token: 'access-token-123',
-      refresh_token: 'refresh-token-456',
-      token_type: 'Bearer',
-      expires_in: 900, // 15 minutes
-      scope: 'read write',
+    const mockSessionResponse = {
+      data: {
+        'session-token': 'session-token-123',
+        'remember-token': 'remember-token-456',
+      },
     };
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => mockSessionResponse,
     });
 
     const credentials: LoginCredentials = {
@@ -36,47 +35,64 @@ describe('OAuth2Client', () => {
     const result = await client.authenticate(credentials);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.tastytrade.com/oauth/token',
+      'https://api.tastyworks.com/sessions',
       expect.objectContaining({
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: expect.stringContaining('grant_type=password'),
+        body: expect.stringContaining('"login":"test@example.com"'),
       })
     );
 
-    expect(result).toEqual(mockResponse);
-  });
-
-  it('should refresh token with valid refresh token', async () => {
-    const mockResponse: OAuthTokenResponse = {
-      access_token: 'new-access-token',
-      refresh_token: 'new-refresh-token',
+    expect(result).toEqual({
+      access_token: 'session-token-123',
+      refresh_token: 'remember-token-456',
       token_type: 'Bearer',
       expires_in: 900,
       scope: 'read write',
+      sessionResponse: {
+        data: {
+          'session-token': 'session-token-123',
+          'remember-token': 'remember-token-456',
+        },
+      },
+    });
+  });
+
+  it('should refresh token with valid refresh token', async () => {
+    const mockSessionResponse = {
+      data: {
+        'session-token': 'new-session-token',
+        'remember-token': 'new-remember-token',
+      },
     };
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => mockResponse,
+      json: async () => mockSessionResponse,
     });
 
     const result = await client.refreshToken('refresh-token-456');
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.tastytrade.com/oauth/token',
+      'https://api.tastyworks.com/sessions',
       expect.objectContaining({
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: expect.stringContaining('grant_type=refresh_token'),
+        body: expect.stringContaining('"remember-token":"refresh-token-456"'),
       })
     );
 
-    expect(result).toEqual(mockResponse);
+    expect(result).toEqual({
+      access_token: 'new-session-token',
+      refresh_token: 'new-remember-token',
+      token_type: 'Bearer',
+      expires_in: 900,
+      scope: 'read write',
+    });
   });
 
   it('should throw error on authentication failure', async () => {
@@ -117,5 +133,44 @@ describe('OAuth2Client', () => {
     expect(formData).toContain('grant_type=password');
     expect(formData).toContain('username=test%40example.com');
     expect(formData).toContain('password=password123');
+  });
+
+  it('should extract user info from session response', () => {
+    const mockSessionResponse = {
+      sessionResponse: {
+        data: {
+          user: {
+            email: 'test@example.com',
+            username: 'testuser',
+            name: 'Test User',
+            'external-id': 'ext123',
+          },
+        },
+      },
+    };
+
+    const result = client.getUserFromSessionResponse(mockSessionResponse);
+
+    expect(result).toEqual({
+      data: {
+        user: {
+          email: 'test@example.com',
+          username: 'testuser',
+          name: 'Test User',
+          'external-id': 'ext123',
+        },
+      },
+    });
+  });
+
+  it('should handle demo mode in getUserFromSessionResponse', () => {
+    const mockDemoResponse = {
+      access_token: 'demo-session-token-123',
+    };
+
+    const result = client.getUserFromSessionResponse(mockDemoResponse);
+
+    expect(result.data.user.username).toBe('Travis1282');
+    expect(result.data.user.email).toBe('travis@demo.com');
   });
 });

@@ -1,4 +1,6 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
+import { OAuth2Client } from '$lib/api/clients/oauth';
+import { TokenStorage } from '$lib/utils/token-storage';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -95,6 +97,9 @@ export const authStore = {
 
   // Logout
   logout: () => {
+    // Clear stored tokens
+    TokenStorage.clear();
+
     update((state) => ({
       ...state,
       isAuthenticated: false,
@@ -104,6 +109,26 @@ export const authStore = {
       tokenExpiry: null,
       error: null,
     }));
+  },
+
+  // Secure logout with server-side session invalidation
+  secureLogout: async () => {
+    try {
+      // Get current auth state
+      const currentState = get({ subscribe });
+
+      // If we have an access token, we could invalidate it on the server
+      // For now, we'll just do local logout but this is where server-side
+      // session invalidation would happen in a production environment
+      if (currentState.accessToken) {
+        console.log('Performing secure logout with token cleanup');
+      }
+    } catch (error) {
+      console.warn('Error during secure logout:', error);
+    } finally {
+      // Always perform local logout regardless of server response
+      authStore.logout();
+    }
   },
 
   // Set intended destination for post-login redirect
@@ -116,14 +141,51 @@ export const authStore = {
     update((state) => ({ ...state, intendedDestination: null }));
   },
 
-  // Login method (placeholder for now)
-  login: async (/* credentials: LoginCredentials */) => {
+  // Login method
+  login: async (credentials: LoginCredentials) => {
     authStore.setLoading(true);
 
     try {
-      // TODO: Implement actual OAuth2 authentication
-      // For now, just simulate an error
-      throw new Error('Authentication not implemented yet');
+      const oauthClient = new OAuth2Client();
+
+      // Authenticate with the API
+      const tokenResponse = await oauthClient.authenticate(credentials);
+
+      // Calculate token expiry
+      const tokenExpiry = new Date(Date.now() + tokenResponse.expires_in * 1000);
+
+      // Store tokens securely
+      TokenStorage.store({
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        tokenExpiry,
+      });
+
+      // Get user information from session response
+      let user: User;
+      try {
+        const userResponse = oauthClient.getUserFromSessionResponse(tokenResponse);
+        user = {
+          id: userResponse.data?.user?.['external-id'] || 'unknown',
+          email: userResponse.data?.user?.email || credentials.username,
+          username: userResponse.data?.user?.username || credentials.username,
+        };
+      } catch (userError) {
+        // If we can't get user info, create a minimal user object
+        console.warn('Failed to get user info:', userError);
+        user = {
+          id: 'unknown',
+          email: credentials.username,
+          username: credentials.username,
+        };
+      }
+
+      // Set authenticated state
+      authStore.setAuthenticated(user, {
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        tokenExpiry,
+      });
     } catch (error) {
       authStore.setError(error instanceof Error ? error.message : 'Authentication failed');
       throw error;
@@ -135,18 +197,78 @@ export const authStore = {
     authStore.setCheckingAuth(true);
 
     try {
-      // TODO: Implement token validation and refresh logic
-      // For now, just check if we have tokens in storage
+      // Check for stored tokens
+      const storedTokens = TokenStorage.retrieve();
 
-      // This would typically:
-      // 1. Check for stored tokens
-      // 2. Validate token expiry
-      // 3. Refresh tokens if needed
-      // 4. Set authenticated state
+      if (!storedTokens) {
+        // No tokens found, user is not authenticated
+        authStore.setCheckingAuth(false);
+        return;
+      }
+
+      // Check if tokens are expired
+      if (TokenStorage.isExpired(storedTokens)) {
+        // Try to refresh tokens
+        const refreshToken = TokenStorage.getRefreshToken();
+        if (refreshToken) {
+          try {
+            const oauthClient = new OAuth2Client();
+            const tokenResponse = await oauthClient.refreshToken(refreshToken);
+
+            // Calculate new token expiry
+            const tokenExpiry = new Date(Date.now() + tokenResponse.expires_in * 1000);
+
+            // Store new tokens
+            TokenStorage.store({
+              accessToken: tokenResponse.access_token,
+              refreshToken: tokenResponse.refresh_token,
+              tokenExpiry,
+            });
+
+            // Set authenticated state with existing user or create minimal user
+            const user: User = {
+              id: 'unknown',
+              email: 'unknown',
+              username: 'unknown',
+            };
+
+            authStore.setAuthenticated(user, {
+              accessToken: tokenResponse.access_token,
+              refreshToken: tokenResponse.refresh_token,
+              tokenExpiry,
+            });
+          } catch (refreshError) {
+            console.warn('Token refresh failed:', refreshError);
+            // Clear invalid tokens
+            TokenStorage.clear();
+            authStore.logout();
+          }
+        } else {
+          // No refresh token, clear expired tokens
+          TokenStorage.clear();
+          authStore.logout();
+        }
+      } else {
+        // Valid tokens found, set authenticated state
+        const user: User = {
+          id: 'unknown',
+          email: 'unknown',
+          username: 'unknown',
+        };
+
+        authStore.setAuthenticated(user, {
+          accessToken: storedTokens.accessToken,
+          refreshToken: storedTokens.refreshToken,
+          tokenExpiry: storedTokens.tokenExpiry,
+        });
+      }
 
       authStore.setCheckingAuth(false);
     } catch (error) {
       console.error('Auth check failed:', error);
+      // Clear potentially corrupted tokens
+      TokenStorage.clear();
+      authStore.logout();
       authStore.setCheckingAuth(false);
     }
   },
