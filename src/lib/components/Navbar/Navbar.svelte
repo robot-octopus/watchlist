@@ -9,7 +9,7 @@
 
   onMount(() => {
     const updateTheme = () => {
-      currentTheme = document.documentElement.getAttribute('data-mode') || 'light';
+      currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
     };
 
     updateTheme();
@@ -17,7 +17,7 @@
     const observer = new MutationObserver(updateTheme);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['data-mode'],
+      attributeFilter: ['class'],
     });
 
     return () => observer.disconnect();

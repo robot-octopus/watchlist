@@ -19,6 +19,8 @@
       const mode = isDark ? 'dark' : 'light';
       document.documentElement.setAttribute('data-mode', mode);
       document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.setAttribute('data-theme', 'crimson');
+      document.body.setAttribute('data-theme', 'crimson');
     }
   }
 

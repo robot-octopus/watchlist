@@ -12,6 +12,8 @@
 
     document.documentElement.setAttribute('data-mode', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.documentElement.setAttribute('data-theme', 'crimson');
+    document.body.setAttribute('data-theme', 'crimson');
   </script>
 </svelte:head>
 
