@@ -17,19 +17,16 @@
   }
 </script>
 
-<div class="search-container">
-  <input
-    type="text"
-    bind:value={query}
-    placeholder="Search symbols..."
-    class="form-input-financial"
-  />
+<div class="relative">
+  <input type="text" bind:value={query} placeholder="Search symbols..." class="input" />
 
   {#if results.length > 0}
-    <ul class="results-list">
-      {#each results as symbol}
-        <li class="result-item">{symbol}</li>
-      {/each}
-    </ul>
+    <div class="card absolute z-10 w-full mt-1 max-h-60 overflow-auto">
+      <ul class="list">
+        {#each results as symbol}
+          <li class="option">{symbol}</li>
+        {/each}
+      </ul>
+    </div>
   {/if}
 </div>

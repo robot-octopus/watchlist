@@ -33,7 +33,7 @@
 <button
   data-testid="theme-toggle"
   onclick={toggleTheme}
-  class="btn btn-sm bg-transparent border-none w-10 h-10 p-0"
+  class="btn btn-sm variant-ghost-surface w-10 h-10 p-0"
   aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
   tabindex="0"
 >
