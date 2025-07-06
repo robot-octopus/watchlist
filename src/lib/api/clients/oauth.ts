@@ -13,10 +13,6 @@ export class OAuth2Client extends BaseApiClient {
    * Note: Tastytrade uses session-based authentication, not OAuth2
    */
   async authenticate(credentials: LoginCredentials): Promise<OAuthTokenResponse> {
-    const requestId = 'req-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    console.log(`🔐 [${requestId}] Attempting authentication for:`, credentials.username);
-    console.log(`🌍 [${requestId}] Using API URL:`, this.apiBaseUrl);
-
     // Demo mode for testing - check for environment variables
     const demoUsername = process.env.DEMO_USERNAME;
     const demoPassword = process.env.DEMO_PASSWORD;
@@ -36,24 +32,17 @@ export class OAuth2Client extends BaseApiClient {
         scope: 'read write',
       };
 
-      console.log(
-        `✅ [${requestId}] Demo authentication successful for user:`,
-        credentials.username
-      );
       return demoResponse;
     }
 
     // Try real API authentication for other credentials
     const url = `${this.apiBaseUrl}/sessions`;
-    console.log(`📡 [${requestId}] Making API request to:`, url);
 
     const body = JSON.stringify({
       login: credentials.username,
       password: credentials.password,
       'remember-me': false,
     });
-
-    console.log('📤 Request body:', { login: credentials.username, 'remember-me': false });
 
     try {
       const response = await fetch(url, {
@@ -66,25 +55,13 @@ export class OAuth2Client extends BaseApiClient {
         body,
       });
 
-      console.log(`📥 [${requestId}] Response status:`, response.status, response.statusText);
-      console.log(
-        `📥 [${requestId}] Response headers:`,
-        Object.fromEntries(response.headers.entries())
-      );
-
       if (!response.ok) {
         let errorMessage = 'Authentication failed';
         let responseText = '';
 
         try {
           responseText = await response.text();
-          console.log('❌ Full error response body:', responseText);
-          console.log('❌ Response body type:', typeof responseText);
-          console.log('❌ Response body length:', responseText.length);
-
-          // Try to parse as JSON
           const errorData = JSON.parse(responseText);
-          console.log('❌ Parsed error data:', errorData);
 
           if (errorData.error?.message) {
             errorMessage = errorData.error.message;
@@ -99,23 +76,15 @@ export class OAuth2Client extends BaseApiClient {
           } else {
             errorMessage = JSON.stringify(errorData);
           }
-        } catch (parseError) {
-          console.log('❌ Could not parse error response as JSON:', parseError);
-          console.log('❌ Raw response text:', responseText);
+        } catch {
           errorMessage =
             responseText || `Authentication failed: ${response.status} ${response.statusText}`;
         }
 
-        console.log('❌ Final error message:', errorMessage);
         throw new Error(errorMessage);
       }
 
       const sessionResponse = await response.json();
-      console.log('✅ Session response received:', {
-        hasData: !!sessionResponse.data,
-        hasSessionToken: !!sessionResponse.data?.['session-token'],
-        hasUser: !!sessionResponse.data?.user,
-      });
 
       // Convert Tastytrade session response to OAuth2-like format for compatibility
       const oauthResponse: OAuthTokenResponse = {
@@ -129,10 +98,8 @@ export class OAuth2Client extends BaseApiClient {
       // Store session response for user info extraction
       (oauthResponse as any).sessionResponse = sessionResponse;
 
-      console.log(`✅ [${requestId}] Authentication successful for user:`, credentials.username);
       return oauthResponse;
     } catch (error) {
-      console.error(`❌ [${requestId}] Authentication error:`, error);
       if (error instanceof Error) {
         throw error;
       }
@@ -145,8 +112,6 @@ export class OAuth2Client extends BaseApiClient {
    * Note: Tastytrade uses remember tokens for session renewal
    */
   async refreshToken(refreshToken: string): Promise<OAuthTokenResponse> {
-    console.log('🔄 Attempting token refresh');
-
     // Demo mode for testing - check for demo tokens
     if (refreshToken.startsWith('demo-remember-token-')) {
       // Simulate successful token refresh for demo purposes
@@ -158,7 +123,6 @@ export class OAuth2Client extends BaseApiClient {
         scope: 'read write',
       };
 
-      console.log('✅ Demo token refresh successful');
       return demoResponse;
     }
 
@@ -180,14 +144,11 @@ export class OAuth2Client extends BaseApiClient {
         body,
       });
 
-      console.log('📥 Refresh response status:', response.status, response.statusText);
-
       if (!response.ok) {
         let errorMessage = 'Token refresh failed';
 
         try {
           const errorText = await response.text();
-          console.log('❌ Refresh error response:', errorText);
           const errorData = JSON.parse(errorText);
           if (errorData.error?.message) {
             errorMessage = errorData.error.message;
@@ -211,10 +172,8 @@ export class OAuth2Client extends BaseApiClient {
         scope: 'read write',
       };
 
-      console.log('✅ Token refresh successful');
       return oauthResponse;
     } catch (error) {
-      console.error('❌ Token refresh error:', error);
       throw error;
     }
   }
@@ -237,8 +196,6 @@ export class OAuth2Client extends BaseApiClient {
    * Note: User info is included in the session response, no separate API call needed
    */
   getUserFromSessionResponse(sessionResponse: any): any {
-    console.log('👤 Extracting user info from session response');
-
     // Demo mode for testing - check for demo tokens
     if (sessionResponse?.access_token?.startsWith('demo-session-token-')) {
       // Return mock user data for demo purposes
@@ -256,13 +213,11 @@ export class OAuth2Client extends BaseApiClient {
         },
       };
 
-      console.log('✅ Demo user info returned');
       return demoUserData;
     }
 
     // For real API calls, user info is included in the session response
     if (sessionResponse?.sessionResponse?.data?.user) {
-      console.log('✅ Real user info extracted from session');
       return {
         data: {
           user: sessionResponse.sessionResponse.data.user,
@@ -271,7 +226,6 @@ export class OAuth2Client extends BaseApiClient {
     }
 
     // Fallback error if no user data available
-    console.error('❌ No user data found in session response');
     throw new Error('User information not available - please re-authenticate');
   }
 

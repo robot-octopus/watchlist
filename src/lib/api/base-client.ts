@@ -3,7 +3,7 @@
  * Handles authentication, error handling, and common request logic
  */
 
-const BASE_URL = 'https://api.tastytrade.com';
+const BASE_URL = 'https://api.tastyworks.com';
 
 export class ApiError extends Error {
   public readonly statusCode: number;
@@ -36,11 +36,15 @@ export class BaseApiClient {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'User-Agent': 'TastytradeWatchlistApp/1.0',
       ...(options.headers as Record<string, string>),
     };
 
     if (this.authToken) {
-      headers.Authorization = `Bearer ${this.authToken}`;
+      // For Tastytrade session tokens, don't use Bearer prefix
+      // Session tokens are used directly, access tokens need Bearer prefix
+      headers.Authorization = this.authToken;
     }
 
     const response = await fetch(url, {

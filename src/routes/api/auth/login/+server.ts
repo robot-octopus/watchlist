@@ -72,28 +72,25 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       });
     }
 
-    const requestId = 'api-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    console.log(`🔐 [${requestId}] API: Starting authentication for user:`, username);
-    console.log(`🔍 [${requestId}] API: Password length:`, password?.length || 0);
-    console.log(`🔍 [${requestId}] API: Password starts with:`, password?.substring(0, 3) + '...');
-
     try {
       const oauthClient = new OAuth2Client();
 
       // Authenticate with Tastytrade API
-      console.log(`🔐 [${requestId}] API: Calling OAuth client authenticate...`);
       const sessionResponse = await oauthClient.authenticate({
         username,
         password,
       });
 
-      console.log(`✅ [${requestId}] API: Authentication successful!`);
-
       // Extract user data from session response
       const userData = oauthClient.getUserFromSessionResponse(sessionResponse);
 
+      // Extract the actual session token from the nested response
+      const actualSessionToken =
+        (sessionResponse as any).sessionResponse?.data?.['session-token'] ||
+        sessionResponse.access_token;
+
       // Set secure httpOnly cookie for session token
-      cookies.set('session-token', sessionResponse.access_token, {
+      cookies.set('session-token', actualSessionToken, {
         path: '/',
         maxAge: 60 * 60 * 24, // 24 hours
         httpOnly: true,
@@ -128,18 +125,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         if (!isSystemUrl) {
           redirectTarget = intendedDestination;
         }
-
-        console.log(
-          `🎯 [${requestId}] Intended destination:`,
-          intendedDestination,
-          isSystemUrl ? '(filtered)' : '(using)'
-        );
       }
-
-      console.log(
-        `🔄 [${requestId}] API: Authentication completed, returning success with redirect target:`,
-        redirectTarget
-      );
 
       // Return success data as proper JSON
       return json({
@@ -148,13 +134,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         user: userData.data.user,
       });
     } catch (error) {
-      console.error(`❌ [${requestId}] API: Login failed:`, error);
-
       let errorMessage = 'Login failed';
 
       if (error instanceof Error) {
         errorMessage = error.message;
-        console.error(`❌ [${requestId}] API: Error message:`, errorMessage);
 
         // Check for specific Tastytrade error patterns
         if (errorMessage.includes('invalid_credentials')) {
@@ -176,8 +159,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         { status: 400 }
       );
     }
-  } catch (error) {
-    console.error('❌ API: Unexpected error:', error);
+  } catch {
     return json(
       {
         success: false,
