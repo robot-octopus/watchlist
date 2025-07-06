@@ -117,12 +117,16 @@
 
 <div class="relative">
   <div class="space-y-2">
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+    <label
+      class="block text-sm font-medium text-gray-700 dark:text-gray-200"
+      for="symbol-search-input"
+    >
       Symbol Search
     </label>
 
     <div class="relative">
       <input
+        id="symbol-search-input"
         class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
         type="text"
         {placeholder}
@@ -153,6 +157,7 @@
           class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           on:click={clearSearch}
           type="button"
+          aria-label="Clear search"
         >
           <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

@@ -12,6 +12,9 @@
   // Import the SymbolSearchInput component
   import SymbolSearchInput from './SymbolSearchInput.svelte';
 
+  // Import the StreamingChart component
+  import StreamingChart from './StreamingChart.svelte';
+
   // Props
   export let watchlists = [];
   export let sessionToken = '';
@@ -597,6 +600,15 @@
                     placeholder="Search symbols to add..."
                     disabled={loading}
                     on:select={handleSymbolSelect}
+                  />
+                </div>
+
+                <!-- Streaming Chart -->
+                <div class="mb-6">
+                  <StreamingChart
+                    symbols={getSymbols(watchlist).map((s) => s.symbol)}
+                    {sessionToken}
+                    height={400}
                   />
                 </div>
 
