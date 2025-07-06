@@ -1,28 +1,23 @@
 import { BaseApiClient } from '../base-client';
-import type { definitions, operations } from '../types/symbol-search';
 
-export type SymbolData = definitions['SymbolData'];
-export type SearchSymbolsParams = operations['searchSymbols']['parameters']['path'];
-export type SearchSymbolsResponse = operations['searchSymbols']['responses'][200]['schema'];
+export interface SymbolData {
+  symbol: string;
+  description?: string;
+  'listed-market'?: string;
+  'price-increments'?: string;
+  'trading-hours'?: string;
+  options?: boolean;
+  'instrument-type'?: string;
+}
 
 export class SymbolSearchClient extends BaseApiClient {
   /**
-   * Search for symbols by name or fragment
-   * @param params - Search parameters
+   * Search for symbols by symbol or fragment
+   * @param symbol Symbol or fragment of a symbol to search
    * @returns Array of symbol data
    */
-  async searchSymbols(params: SearchSymbolsParams): Promise<SymbolData[]> {
-    const endpoint = `/symbols/search/${encodeURIComponent(params.symbol)}`;
-    const response = await this.get<SymbolData[]>(endpoint);
-    return response;
-  }
-
-  /**
-   * Convenience method for quick symbol lookup
-   * @param query - Symbol or fragment to search for
-   * @returns Array of symbol data
-   */
-  async search(query: string): Promise<SymbolData[]> {
-    return this.searchSymbols({ symbol: query });
+  async searchSymbols(symbol: string): Promise<SymbolData[]> {
+    const endpoint = `/symbols/search/${encodeURIComponent(symbol)}`;
+    return this.get<SymbolData[]>(endpoint);
   }
 }

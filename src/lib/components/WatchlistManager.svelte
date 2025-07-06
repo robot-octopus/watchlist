@@ -9,6 +9,9 @@
   // Import the WatchlistsClient
   import { WatchlistsClient } from '$lib/api/clients/watchlists';
 
+  // Import the SymbolSearchInput component
+  import SymbolSearchInput from './SymbolSearchInput.svelte';
+
   // Props
   export let watchlists = [];
   export let sessionToken = '';
@@ -66,12 +69,24 @@
         'watchlist-entries': selectedWatchlist['watchlist-entries'] || [],
       });
 
+      // Debug: Log the update response structure
+      console.log('Updated watchlist response:', updatedWatchlist);
+      console.log('Updated watchlist name:', updatedWatchlist?.name);
+      console.log('Updated watchlist data:', updatedWatchlist?.data);
+
+      // Handle nested response structure like in creation
+      const watchlistData = updatedWatchlist?.data || updatedWatchlist;
+      console.log('Processed updated watchlist data:', watchlistData);
+
       // Update the watchlists array
       const index = watchlists.findIndex((w) => w.name === selectedWatchlist?.name);
       if (index >= 0) {
-        watchlists[index] = updatedWatchlist;
+        watchlists[index] = watchlistData;
         watchlists = [...watchlists];
       }
+
+      // Update selectedWatchlist to reflect the new data
+      selectedWatchlist = watchlistData;
 
       // Show success toast
       const toast = {
@@ -82,7 +97,7 @@
       toastStore.trigger(toast);
 
       cancelEdit();
-      dispatch('update', updatedWatchlist);
+      dispatch('update', watchlistData);
     } catch (error) {
       console.error('Failed to update watchlist:', error);
       const toast = {
@@ -218,6 +233,163 @@
   function getSymbols(watchlist) {
     if (!watchlist['watchlist-entries']) return [];
     return Object.values(watchlist['watchlist-entries']);
+  }
+
+  // Handle symbol selection from search
+  function handleSymbolSelect(event) {
+    const { symbol, data } = event.detail;
+
+    if (!selectedWatchlist) {
+      const toast = {
+        message: 'Please select a watchlist first to add symbols.',
+        background: 'variant-filled-warning',
+        timeout: 3000,
+      };
+      toastStore.trigger(toast);
+      return;
+    }
+
+    addSymbolToWatchlist(symbol, data);
+  }
+
+  // Add symbol to selected watchlist
+  async function addSymbolToWatchlist(symbol, symbolData) {
+    if (!selectedWatchlist) return;
+
+    loading = true;
+    try {
+      // Get current watchlist entries
+      const currentEntries = selectedWatchlist['watchlist-entries'] || {};
+
+      // Check if symbol already exists
+      if (currentEntries[symbol]) {
+        const toast = {
+          message: `Symbol ${symbol} is already in this watchlist.`,
+          background: 'variant-filled-warning',
+          timeout: 3000,
+        };
+        toastStore.trigger(toast);
+        return;
+      }
+
+      // Add new symbol entry
+      const newEntry = {
+        symbol: symbol,
+        'instrument-type': symbolData['instrument-type'] || 'Stock',
+      };
+
+      const updatedEntries = {
+        ...currentEntries,
+        [symbol]: newEntry,
+      };
+
+      // Update the watchlist via API
+      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.name || '', {
+        name: selectedWatchlist.name,
+        'group-name': selectedWatchlist['group-name'] || undefined,
+        'watchlist-entries': Object.values(updatedEntries),
+      });
+
+      // Handle nested response structure
+      const watchlistData = updatedWatchlist?.data || updatedWatchlist;
+
+      // Update the watchlists array
+      const index = watchlists.findIndex((w) => w.name === selectedWatchlist?.name);
+      if (index >= 0) {
+        watchlists[index] = watchlistData;
+        watchlists = [...watchlists];
+      }
+
+      // Update selectedWatchlist
+      selectedWatchlist = watchlistData;
+
+      // Show success toast
+      const toast = {
+        message: `Added ${symbol} to ${selectedWatchlist.name}!`,
+        background: 'variant-filled-success',
+        timeout: 3000,
+      };
+      toastStore.trigger(toast);
+    } catch (error) {
+      console.error('Failed to add symbol to watchlist:', error);
+      const toast = {
+        message: 'Failed to add symbol to watchlist. Please try again.',
+        background: 'variant-filled-error',
+        timeout: 5000,
+      };
+      toastStore.trigger(toast);
+    } finally {
+      loading = false;
+    }
+  }
+
+  // Remove symbol from watchlist
+  async function removeSymbolFromWatchlist(symbol) {
+    if (!selectedWatchlist) return;
+
+    const modal = {
+      type: 'confirm',
+      title: 'Remove Symbol',
+      body: `Are you sure you want to remove ${symbol} from ${selectedWatchlist.name}?`,
+      response: (confirmed) => {
+        if (confirmed) {
+          performRemoveSymbol(symbol);
+        }
+      },
+    };
+    modalStore.trigger(modal);
+  }
+
+  // Perform the actual symbol removal
+  async function performRemoveSymbol(symbol) {
+    if (!selectedWatchlist) return;
+
+    loading = true;
+    try {
+      // Get current watchlist entries
+      const currentEntries = selectedWatchlist['watchlist-entries'] || {};
+
+      // Remove the symbol
+      delete currentEntries[symbol];
+
+      // Update the watchlist via API
+      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.name || '', {
+        name: selectedWatchlist.name,
+        'group-name': selectedWatchlist['group-name'] || undefined,
+        'watchlist-entries': Object.values(currentEntries),
+      });
+
+      // Handle nested response structure
+      const watchlistData = updatedWatchlist?.data || updatedWatchlist;
+
+      // Update the watchlists array
+      const index = watchlists.findIndex((w) => w.name === selectedWatchlist?.name);
+      if (index >= 0) {
+        watchlists[index] = watchlistData;
+        watchlists = [...watchlists];
+      }
+
+      // Update selectedWatchlist
+      selectedWatchlist = watchlistData;
+
+      // Show success toast
+      const toast = {
+        message: `Removed ${symbol} from ${selectedWatchlist.name}!`,
+        background: 'variant-filled-success',
+        timeout: 3000,
+      };
+      toastStore.trigger(toast);
+    } catch (error) {
+      console.error('Failed to remove symbol from watchlist:', error);
+      const toast = {
+        message: 'Failed to remove symbol from watchlist. Please try again.',
+        background: 'variant-filled-error',
+        timeout: 5000,
+      };
+      toastStore.trigger(toast);
+    } finally {
+      loading = false;
+    }
   }
 </script>
 
@@ -459,24 +631,57 @@
                 <h5 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                   Symbols ({getSymbolCount(watchlist)})
                 </h5>
+
+                <!-- Symbol Search Input -->
+                <div class="mb-4">
+                  <SymbolSearchInput
+                    {sessionToken}
+                    placeholder="Search symbols to add..."
+                    disabled={loading}
+                    on:select={handleSymbolSelect}
+                  />
+                </div>
+
                 {#if getSymbolCount(watchlist) > 0}
                   <div class="flex flex-wrap gap-2">
                     {#each getSymbols(watchlist) as symbol}
-                      <span
-                        class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-600"
+                      <div
+                        class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-2 rounded-lg text-sm font-medium border border-gray-200 dark:border-gray-600 flex items-center gap-2"
                       >
-                        {symbol.symbol || 'Unknown'}
-                        {#if symbol['instrument-type']}
-                          <span class="text-xs text-gray-500 dark:text-gray-400 ml-1"
-                            >({symbol['instrument-type']})</span
+                        <span>
+                          {symbol.symbol || 'Unknown'}
+                          {#if symbol['instrument-type']}
+                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-1"
+                              >({symbol['instrument-type']})</span
+                            >
+                          {/if}
+                        </span>
+                        <button
+                          class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 ml-1 transition-colors"
+                          on:click={() => removeSymbolFromWatchlist(symbol.symbol)}
+                          disabled={loading}
+                          title="Remove symbol"
+                        >
+                          <svg
+                            class="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                        {/if}
-                      </span>
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
                     {/each}
                   </div>
                 {:else}
                   <p class="text-gray-500 dark:text-gray-400 italic">
-                    No symbols in this watchlist
+                    No symbols in this watchlist. Use the search above to add symbols.
                   </p>
                 {/if}
               </div>
