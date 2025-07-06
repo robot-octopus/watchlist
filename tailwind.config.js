@@ -13,14 +13,7 @@ export default {
   },
   plugins: [
     skeleton({
-      themes: {
-        preset: [
-          {
-            name: 'crimson',
-            enhancements: true,
-          },
-        ],
-      },
+      themes: { preset: ['skeleton'] },
     }),
   ],
 };

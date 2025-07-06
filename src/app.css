@@ -1,6 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@layer base {
+  :root {
+    --theme-font-family-base: system-ui;
+    --theme-font-family-heading: system-ui;
+  }
+}
 
 @layer components {
   .price-positive {
@@ -11,5 +17,14 @@
   }
   .price-neutral {
     @apply text-gray-600 font-semibold;
+  }
+
+  /* Custom Modal Styling */
+  .modal-backdrop {
+    @apply fixed inset-0 z-[999] bg-black/50 backdrop-blur-sm;
+  }
+
+  .modal-transition {
+    @apply transition-all duration-200;
   }
 }

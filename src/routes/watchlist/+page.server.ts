@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
     if (!sessionToken) {
       return {
         watchlists: [],
-        publicWatchlists: [],
+        sessionToken: '',
         error: 'Authentication required',
       };
     }
@@ -22,18 +22,15 @@ export const load: PageServerLoad = async ({ cookies }) => {
     // Fetch all watchlists
     const watchlistsResponse = await watchlistClient.getWatchlists();
 
-    // Also fetch public watchlists
-    const publicWatchlistsResponse = await watchlistClient.getPublicWatchlists();
-
     return {
       watchlists: (watchlistsResponse as any).data?.items || [],
-      publicWatchlists: (publicWatchlistsResponse as any).data?.items || [],
+      sessionToken,
     };
   } catch (error) {
     // Return empty arrays on error so page still renders
     return {
       watchlists: [],
-      publicWatchlists: [],
+      sessionToken: cookies.get('session-token') || '',
       error: `Failed to load watchlists from Tastytrade API: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
