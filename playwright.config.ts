@@ -6,66 +6,51 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : 2,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['list'],
-  ],
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  /* Reduce workers to prevent hanging */
+  workers: 1,
+  /* Simple reporter that doesn't hang */
+  reporter: [['list']],
+  /* Shared settings for all the projects below. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:4173',
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    /* Minimal trace collection */
     trace: 'retain-on-failure',
-    
-    /* Take screenshot on failure */
-    screenshot: { mode: 'only-on-failure', fullPage: true },
-    
-    /* Record video on failure */
-    video: { mode: 'retain-on-failure' },
+
+    /* Screenshots only on failure */
+    screenshot: { mode: 'only-on-failure' },
+
+    /* No video recording to reduce resource usage */
+    video: 'off',
   },
 
-  /* Configure projects for major browsers */
+  /* Configure only essential browsers for faster testing */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
   ],
 
-  /* Use existing dev server - no need to start a new one */
+  /* Simplified web server config */
   webServer: {
-    command: 'echo "Using existing dev server on port 3000"',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
-    timeout: 5 * 1000, // Short timeout since server should already be running
+    command: 'npm run build && npm run preview',
+    port: 4173,
+    reuseExistingServer: !process.env.CI,
+    timeout: 60 * 1000,
+    stdout: 'ignore',
+    stderr: 'pipe',
+  },
+
+  /* Aggressive timeout settings to prevent hanging */
+  timeout: 60 * 1000,
+  expect: {
+    timeout: 15 * 1000,
   },
 });

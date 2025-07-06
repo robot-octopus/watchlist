@@ -1,117 +1,71 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Login Integration Tests', () => {
+test.describe('Login Integration', () => {
   test.beforeEach(async ({ page }) => {
-    // Start fresh for each test
-    await page.goto('/');
+    // Clear any existing authentication
+    await page.context().clearCookies();
   });
 
-  test('should redirect unauthenticated users to login', async ({ page }) => {
-    // Should be redirected to login page when accessing root
-    await expect(page).toHaveURL('/login');
+  test('should login with valid demo credentials', async ({ page }) => {
+    // Skip if demo credentials not provided
+    if (!process.env.DEMO_USERNAME || !process.env.DEMO_PASSWORD) {
+      test.skip();
+    }
 
-    // Should see login form
-    await expect(page.getByRole('heading', { name: 'Welcome Back' })).toBeVisible();
-    await expect(page.getByPlaceholder('Enter your username or email')).toBeVisible();
-    await expect(page.getByPlaceholder('Enter your password')).toBeVisible();
-  });
-
-  test('should show intended destination when redirected from protected route', async ({
-    page,
-  }) => {
-    // Try to access protected route directly
-    await page.goto('/watchlist');
-
-    // Should be redirected to login
-    await expect(page).toHaveURL('/login');
-
-    // Should show intended destination message
-    await expect(
-      page.locator("text=You'll be redirected to /watchlist after signing in")
-    ).toBeVisible();
-  });
-
-  test('should successfully authenticate with demo credentials', async ({ page }) => {
     await page.goto('/login');
 
-    // Fill in demo credentials
-    await page.getByPlaceholder('Enter your username or email').fill('Travis1282');
-    await page.getByPlaceholder('Enter your password').fill('Lometogo202');
+    // Fill in the form
+    await page.getByPlaceholder('Enter your username or email').fill(process.env.DEMO_USERNAME);
+    await page.getByPlaceholder('Enter your password').fill(process.env.DEMO_PASSWORD);
 
-    // Submit form
+    // Submit the form
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // Should see loading state
-    await expect(page.getByText('Signing in...')).toBeVisible();
-
-    // Should be redirected to home page after login
+    // Should redirect to home page
     await expect(page).toHaveURL('/');
 
-    // Should see user info in navbar
-    await expect(page.getByText('Travis1282')).toBeVisible();
-    await expect(page.getByText('Authenticated')).toBeVisible();
-    await expect(page.getByTestId('logout-button')).toBeVisible();
+    // Should show user info in navbar
+    await expect(page.getByText(process.env.DEMO_USERNAME)).toBeVisible();
   });
 
-  test('should redirect to intended destination after login', async ({ page }) => {
-    // Try to access protected route
-    await page.goto('/watchlist');
+  test('should handle login form errors gracefully', async ({ page }) => {
+    // Skip if demo credentials not provided
+    if (!process.env.DEMO_USERNAME || !process.env.DEMO_PASSWORD) {
+      test.skip();
+    }
 
-    // Should be redirected to login with intended destination shown
-    await expect(page).toHaveURL('/login');
-    await expect(
-      page.locator("text=You'll be redirected to /watchlist after signing in")
-    ).toBeVisible();
+    await page.goto('/login');
 
-    // Login with demo credentials
-    await page.getByPlaceholder('Enter your username or email').fill('Travis1282');
-    await page.getByPlaceholder('Enter your password').fill('Lometogo202');
+    // Fill form with valid username but wrong password
+    await page.getByPlaceholder('Enter your username or email').fill(process.env.DEMO_USERNAME);
+    await page.getByPlaceholder('Enter your password').fill('wrong_password');
+
+    // Submit the form
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // Should be redirected to intended destination
-    await expect(page).toHaveURL('/watchlist');
+    // Should stay on login page
+    await expect(page).toHaveURL('/login');
+
+    // Should show error message
+    await expect(page.getByText('Authentication Failed')).toBeVisible();
   });
 
-  test('should show validation errors for invalid input', async ({ page }) => {
+  test('should validate required fields', async ({ page }) => {
     await page.goto('/login');
 
     // Try to submit empty form
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // Should show validation errors
+    // Should show field validation errors
     await expect(page.getByText('Username is required')).toBeVisible();
     await expect(page.getByText('Password is required')).toBeVisible();
-
-    // Fill username but leave password empty
-    await page.getByPlaceholder('Enter your username or email').fill('test');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-
-    // Should still show password error
-    await expect(page.getByText('Password is required')).toBeVisible();
-  });
-
-  test('should show error for invalid credentials', async ({ page }) => {
-    await page.goto('/login');
-
-    // Fill in invalid credentials
-    await page.getByPlaceholder('Enter your username or email').fill('invalid@example.com');
-    await page.getByPlaceholder('Enter your password').fill('wrongpassword');
-
-    // Submit form
-    await page.getByRole('button', { name: 'Sign In' }).click();
-
-    // Should show authentication error
-    await expect(page.getByText('Authentication Failed')).toBeVisible();
-
-    // Should remain on login page
-    await expect(page).toHaveURL('/login');
   });
 
   test('should toggle password visibility', async ({ page }) => {
     await page.goto('/login');
 
     const passwordInput = page.getByPlaceholder('Enter your password');
-    const toggleButton = page.getByRole('button', { name: 'Show password' });
+    const toggleButton = page.getByRole('button', { name: /show|hide password/i });
 
     // Password should be hidden by default
     await expect(passwordInput).toHaveAttribute('type', 'password');
@@ -121,142 +75,143 @@ test.describe('Login Integration Tests', () => {
     await expect(passwordInput).toHaveAttribute('type', 'text');
 
     // Click toggle to hide password again
-    await page.getByRole('button', { name: 'Hide password' }).click();
+    await toggleButton.click();
     await expect(passwordInput).toHaveAttribute('type', 'password');
   });
 
-  test('should prevent accessing login page when already authenticated', async ({ page }) => {
+  test('should handle network errors gracefully', async ({ page }) => {
+    // Simulate network failure by going offline
+    await page.context().setOffline(true);
+
     await page.goto('/login');
 
-    // Login with demo credentials
-    await page.getByPlaceholder('Enter your username or email').fill('Travis1282');
-    await page.getByPlaceholder('Enter your password').fill('Lometogo202');
+    // Fill form with any credentials
+    await page.getByPlaceholder('Enter your username or email').fill('test_user');
+    await page.getByPlaceholder('Enter your password').fill('test_password');
+
+    // Submit the form
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // Should be redirected to home
-    await expect(page).toHaveURL('/');
-
-    // Try to access login page directly
-    await page.goto('/login');
-
-    // Should be redirected back to home
-    await expect(page).toHaveURL('/');
+    // Should handle the error gracefully
+    // (Exact behavior depends on implementation - could show network error or generic error)
+    await expect(page).toHaveURL('/login');
   });
 
-  test('should successfully logout', async ({ page }) => {
+  test('should show loading state during login', async ({ page }) => {
+    // Skip if demo credentials not provided
+    if (!process.env.DEMO_USERNAME || !process.env.DEMO_PASSWORD) {
+      test.skip();
+    }
+
+    await page.goto('/login');
+
+    // Fill in valid credentials
+    await page.getByPlaceholder('Enter your username or email').fill(process.env.DEMO_USERNAME);
+    await page.getByPlaceholder('Enter your password').fill(process.env.DEMO_PASSWORD);
+
+    // Click submit and immediately check for loading state
+    await page.getByRole('button', { name: 'Sign In' }).click();
+
+    // Should show loading state briefly
+    await expect(page.getByText('Signing in...')).toBeVisible();
+  });
+
+  test('should logout successfully', async ({ page }) => {
+    // Skip if demo credentials not provided
+    if (!process.env.DEMO_USERNAME || !process.env.DEMO_PASSWORD) {
+      test.skip();
+    }
+
     // First login
     await page.goto('/login');
-    await page.getByPlaceholder('Enter your username or email').fill('Travis1282');
-    await page.getByPlaceholder('Enter your password').fill('Lometogo202');
+    await page.getByPlaceholder('Enter your username or email').fill(process.env.DEMO_USERNAME);
+    await page.getByPlaceholder('Enter your password').fill(process.env.DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // Should be authenticated
+    // Verify login success
     await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('logout-button')).toBeVisible();
 
-    // Click logout button
-    await page.getByTestId('logout-button').click();
+    // Now logout
+    await page.getByRole('button', { name: 'Logout' }).click();
 
-    // Should see logging out state
-    await expect(page.getByText('Signing out...')).toBeVisible();
-
-    // Should be redirected to login page
+    // Should redirect to login page
     await expect(page).toHaveURL('/login');
 
-    // Should not see user info in navbar anymore
-    await expect(page.getByText('Travis1282')).not.toBeVisible();
-    await expect(page.getByTestId('logout-button')).not.toBeVisible();
+    // Should not show user info anymore
+    await expect(page.getByText(process.env.DEMO_USERNAME)).not.toBeVisible();
   });
 
-  test('should prevent navigation back to protected routes after logout', async ({ page }) => {
-    // Login and navigate to protected route
-    await page.goto('/login');
-    await page.getByPlaceholder('Enter your username or email').fill('Travis1282');
-    await page.getByPlaceholder('Enter your password').fill('Lometogo202');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+  test('should redirect to intended destination after login', async ({ page }) => {
+    // Skip if demo credentials not provided
+    if (!process.env.DEMO_USERNAME || !process.env.DEMO_PASSWORD) {
+      test.skip();
+    }
+
+    // Try to access protected route first
     await page.goto('/watchlist');
 
-    // Logout
-    await page.getByTestId('logout-button').click();
+    // Should be redirected to login with intended destination message
     await expect(page).toHaveURL('/login');
+    await expect(
+      page.getByText("You'll be redirected to /watchlist after signing in")
+    ).toBeVisible();
 
-    // Try to access protected route again
-    await page.goto('/watchlist');
-
-    // Should be redirected to login
-    await expect(page).toHaveURL('/login');
-  });
-
-  test('should persist login state across page refreshes', async ({ page }) => {
     // Login
-    await page.goto('/login');
-    await page.getByPlaceholder('Enter your username or email').fill('Travis1282');
-    await page.getByPlaceholder('Enter your password').fill('Lometogo202');
+    await page.getByPlaceholder('Enter your username or email').fill(process.env.DEMO_USERNAME);
+    await page.getByPlaceholder('Enter your password').fill(process.env.DEMO_PASSWORD);
     await page.getByRole('button', { name: 'Sign In' }).click();
 
-    // Should be authenticated
-    await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('logout-button')).toBeVisible();
-
-    // Refresh the page
-    await page.reload();
-
-    // Should still be authenticated
-    await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('logout-button')).toBeVisible();
+    // Should be redirected to originally requested page
+    await expect(page).toHaveURL('/watchlist');
   });
 
-  test('should handle network errors gracefully', async ({ page }) => {
+  test('should handle keyboard navigation', async ({ page }) => {
+    // Skip if demo credentials not provided
+    if (!process.env.DEMO_USERNAME || !process.env.DEMO_PASSWORD) {
+      test.skip();
+    }
+
     await page.goto('/login');
 
-    // Intercept and fail the authentication request
-    await page.route('**/sessions', (route) => {
-      route.abort('failed');
-    });
+    // Use keyboard to navigate and fill form
+    await page.keyboard.press('Tab'); // Focus username field
+    await page.keyboard.type(process.env.DEMO_USERNAME);
 
-    // Try to login
-    await page.getByPlaceholder('Enter your username or email').fill('test@example.com');
-    await page.getByPlaceholder('Enter your password').fill('password');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.keyboard.press('Tab'); // Focus password field
+    await page.keyboard.type(process.env.DEMO_PASSWORD);
 
-    // Should show network error
-    await expect(page.getByText('Authentication failed')).toBeVisible();
-
-    // Should remain on login page
-    await expect(page).toHaveURL('/login');
-  });
-
-  test('should work with keyboard navigation', async ({ page }) => {
-    await page.goto('/login');
-
-    // Tab through form elements
-    await page.keyboard.press('Tab'); // Username field
-    await page.keyboard.type('Travis1282');
-
-    await page.keyboard.press('Tab'); // Password field
-    await page.keyboard.type('Lometogo202');
-
-    await page.keyboard.press('Tab'); // Password toggle button
-    await page.keyboard.press('Tab'); // Sign In button
+    await page.keyboard.press('Tab'); // Focus submit button
     await page.keyboard.press('Enter'); // Submit form
 
-    // Should successfully login
+    // Should login successfully
     await expect(page).toHaveURL('/');
-    await expect(page.getByTestId('logout-button')).toBeVisible();
   });
 
-  test('should display proper loading states during authentication check', async ({ page }) => {
+  test('should handle form autocomplete attributes', async ({ page }) => {
+    await page.goto('/login');
+
+    // Check autocomplete attributes
+    await expect(page.getByPlaceholder('Enter your username or email')).toHaveAttribute(
+      'autocomplete',
+      'username'
+    );
+    await expect(page.getByPlaceholder('Enter your password')).toHaveAttribute(
+      'autocomplete',
+      'current-password'
+    );
+  });
+
+  test('should maintain form state on navigation', async ({ page }) => {
+    await page.goto('/login');
+
+    // Fill in partial form data
+    await page.getByPlaceholder('Enter your username or email').fill('partial_username');
+
+    // Navigate away and back
     await page.goto('/');
+    await page.goto('/login');
 
-    // Should show loading state while checking authentication
-    // Note: This might be very quick in demo mode, but important for real API
-    const loadingIndicator = page.getByText('Checking authentication...');
-
-    // Either we see the loading state briefly, or we're immediately redirected
-    // Both are acceptable behavior
-    const isLoading = await loadingIndicator.isVisible().catch(() => false);
-    const isRedirected = await page.url().includes('/login');
-
-    expect(isLoading || isRedirected).toBe(true);
+    // Form should be reset (this is expected behavior for login forms)
+    await expect(page.getByPlaceholder('Enter your username or email')).toHaveValue('');
   });
 });

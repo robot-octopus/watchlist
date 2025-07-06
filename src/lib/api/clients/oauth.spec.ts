@@ -170,7 +170,8 @@ describe('OAuth2Client', () => {
 
     const result = client.getUserFromSessionResponse(mockDemoResponse);
 
-    expect(result.data.user.username).toBe('Travis1282');
-    expect(result.data.user.email).toBe('travis@demo.com');
+    expect(result.data.user.email).toBe('demo@example.com');
+    expect(result.data.user.username).toBe(process.env.DEMO_USERNAME || 'DemoUser');
+    expect(result.data.user.name).toBe('Demo User');
   });
 });

@@ -2,15 +2,23 @@ import { BaseApiClient } from '../base-client';
 import type { OAuthTokenResponse, LoginCredentials } from '../types/oauth';
 
 export class OAuth2Client extends BaseApiClient {
-  private readonly apiBaseUrl = 'https://api.tastyworks.com';
+  private readonly apiBaseUrl = process.env.TASTYTRADE_API_URL || 'https://api.tastyworks.com';
 
   /**
    * Authenticate user with username and password
    * Note: Tastytrade uses session-based authentication, not OAuth2
    */
   async authenticate(credentials: LoginCredentials): Promise<OAuthTokenResponse> {
-    // Demo mode for testing - check for specific test credentials
-    if (credentials.username === 'Travis1282' && credentials.password === 'Lometogo202') {
+    // Demo mode for testing - check for environment variables
+    const demoUsername = process.env.DEMO_USERNAME;
+    const demoPassword = process.env.DEMO_PASSWORD;
+
+    if (
+      demoUsername &&
+      demoPassword &&
+      credentials.username === demoUsername &&
+      credentials.password === demoPassword
+    ) {
       // Simulate successful authentication for demo purposes
       const demoResponse: OAuthTokenResponse = {
         access_token: 'demo-session-token-' + Date.now(),
@@ -165,10 +173,10 @@ export class OAuth2Client extends BaseApiClient {
       const demoUserData = {
         data: {
           user: {
-            email: 'travis@demo.com',
-            username: 'Travis1282',
-            name: 'Travis Clark',
-            nickname: 'Travis',
+            email: 'demo@example.com',
+            username: process.env.DEMO_USERNAME || 'DemoUser',
+            name: 'Demo User',
+            nickname: 'Demo',
             'external-id': 'demo-ext-id',
             'is-confirmed': true,
             'is-two-factor-sessions-enforced': false,

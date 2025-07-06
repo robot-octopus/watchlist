@@ -1,129 +1,95 @@
-<script lang="ts">
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { AppBar } from '@skeletonlabs/skeleton';
-  import logoLight from '$lib/assets/logo_light_theme.7OjByqO2.svg';
-  import logoDark from '$lib/assets/logo_dark_theme.DrBznMDd.svg';
+<!-- Enhanced Navbar with Server-Side Authentication -->
+<script>
+  import { auth, isAuthenticated, currentUser, isDemo } from '$lib/stores/auth';
   import ThemeToggle from './ThemeToggle.svelte';
-  import { authStore } from '$lib/stores/auth';
+  import logo_light from '$lib/assets/logo_light_theme.7OjByqO2.svg';
+  import logo_dark from '$lib/assets/logo_dark_theme.DrBznMDd.svg';
 
-  let currentTheme = 'light';
   let isLoggingOut = false;
-
-  // Subscribe to auth state
-  $: authState = $authStore;
-
-  onMount(() => {
-    const updateTheme = () => {
-      currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    };
-
-    updateTheme();
-
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class'],
-    });
-
-    return () => observer.disconnect();
-  });
 
   async function handleLogout() {
     if (isLoggingOut) return;
 
+    isLoggingOut = true;
+
     try {
-      isLoggingOut = true;
-
-      // Use secure logout method which handles token cleanup and server-side invalidation
-      await authStore.secureLogout();
-
-      // Clear any intended destination
-      authStore.clearIntendedDestination();
-
-      // Redirect to login page using replaceState to prevent going back
-      await goto('/login', { replaceState: true });
+      await auth.logout();
     } catch (error) {
       console.error('Logout failed:', error);
-      // Even if there's an error, still perform basic logout and redirect
-      authStore.logout();
-      await goto('/login', { replaceState: true });
     } finally {
       isLoggingOut = false;
     }
   }
 </script>
 
-<AppBar data-testid="navbar" shadow="shadow-lg">
-  <svelte:fragment slot="lead">
-    <div
-      data-testid="navbar-logo"
-      class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-    >
-      <img
-        src={currentTheme === 'light' ? logoLight : logoDark}
-        alt="tastytrade"
-        class="h-8 w-auto transition-all duration-300"
-      />
-    </div>
-  </svelte:fragment>
+<!-- on:click={(e) => {
+  // Force full page reload to ensure server-side protection
+  e.preventDefault();
+  window.location.href = '/';
+}} -->
 
-  <svelte:fragment slot="trail">
-    <div class="flex items-center gap-6">
-      <!-- Show user info and logout when authenticated -->
-      {#if authState.isAuthenticated && authState.user}
-        <div class="flex items-center gap-4">
-          <!-- User greeting -->
-          <div class="hidden sm:flex flex-col items-end">
-            <span class="text-sm font-medium text-surface-900-50-token">
-              {authState.user.username || authState.user.email}
-            </span>
-            <span class="text-xs text-surface-600-300-token">Authenticated</span>
+<nav class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <div class="flex items-center">
+        <a href="/" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+          <picture>
+            <source srcset={logo_dark} media="(prefers-color-scheme: dark)" />
+            <img src={logo_light} alt="Tastytrade" class="h-8 w-auto" />
+          </picture>
+        </a>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        {#if $isAuthenticated && $currentUser}
+          <div class="flex items-center space-x-3">
+            <div class="text-sm text-gray-700 dark:text-gray-300">
+              <span class="hidden sm:inline">Welcome, </span>
+              <span class="font-medium">{$currentUser.username}</span>
+              {#if $isDemo}
+                <span
+                  class="ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded"
+                >
+                  Demo
+                </span>
+              {/if}
+            </div>
+
+            <button
+              on:click={handleLogout}
+              disabled={isLoggingOut}
+              class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {#if isLoggingOut}
+                <svg
+                  class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Logging out...
+              {:else}
+                Logout
+              {/if}
+            </button>
           </div>
-
-          <!-- Logout button -->
-          <button
-            on:click={handleLogout}
-            disabled={isLoggingOut}
-            class="btn btn-sm variant-ghost-error hover:variant-filled-error transition-all duration-200"
-            data-testid="logout-button"
-            title="Sign out"
-          >
-            {#if isLoggingOut}
-              <svg class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Signing out...
-            {:else}
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                ></path>
-              </svg>
-              Sign Out
-            {/if}
-          </button>
-        </div>
-      {/if}
-
-      <div data-testid="theme-toggle">
+        {/if}
         <ThemeToggle />
       </div>
     </div>
-  </svelte:fragment>
-</AppBar>
+  </div>
+</nav>

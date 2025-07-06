@@ -1,128 +1,273 @@
 /**
- * Token Storage Utilities
- * Provides secure token storage and retrieval for authentication
+ * Token storage utilities
+ *
+ * ⚠️ SECURITY WARNING: This implementation uses localStorage which is vulnerable to XSS attacks.
+ * For production applications, consider using httpOnly cookies or in-memory storage instead.
+ *
+ * Better alternatives:
+ * 1. httpOnly cookies for refresh tokens
+ * 2. In-memory storage for access tokens
+ * 3. Hybrid approach with both
  */
 
-export interface StoredTokens {
-  accessToken: string;
-  refreshToken: string;
-  tokenExpiry: Date;
+// Type declaration for browser APIs that might not be available in all environments
+declare global {
+  function atob(data: string): string;
 }
 
-const STORAGE_KEY = 'tastytrade_tokens';
-
 /**
- * Check if localStorage is available (works in both browser and test environments)
+ * Secure token manager that uses in-memory storage
+ * This is more secure than localStorage but tokens are lost on page refresh
  */
-function isStorageAvailable(): boolean {
-  try {
-    return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
-  } catch {
-    return false;
+export class SecureTokenManager {
+  private static accessToken: string | null = null;
+  private static refreshToken: string | null = null;
+
+  /**
+   * Store access token in memory (more secure)
+   */
+  static setAccessToken(token: string): void {
+    this.accessToken = token;
+  }
+
+  /**
+   * Get access token from memory
+   */
+  static getAccessToken(): string | null {
+    return this.accessToken;
+  }
+
+  /**
+   * Clear access token from memory
+   */
+  static clearAccessToken(): void {
+    this.accessToken = null;
+  }
+
+  /**
+   * Check if we have a valid access token
+   */
+  static hasValidAccessToken(): boolean {
+    return this.accessToken !== null;
+  }
+
+  /**
+   * Store refresh token (in production, this should be an httpOnly cookie)
+   */
+  static setRefreshToken(token: string): void {
+    this.refreshToken = token;
+  }
+
+  /**
+   * Get refresh token
+   */
+  static getRefreshToken(): string | null {
+    return this.refreshToken;
+  }
+
+  /**
+   * Clear all tokens
+   */
+  static clearAllTokens(): void {
+    this.accessToken = null;
+    this.refreshToken = null;
   }
 }
 
-export class TokenStorage {
+/**
+ * ⚠️ DEPRECATED: localStorage-based token storage (vulnerable to XSS)
+ * This is kept for backward compatibility but should not be used in production
+ */
+export class LocalStorageTokenManager {
+  private static readonly TOKEN_KEY = 'session-token';
+  private static readonly USER_KEY = 'user-data';
+
   /**
-   * Store authentication tokens securely
+   * ⚠️ SECURITY WARNING: This stores tokens in localStorage which is vulnerable to XSS attacks
    */
-  static store(tokens: StoredTokens): void {
-    if (!isStorageAvailable()) {
-      console.warn('Cannot store tokens: localStorage not available');
+  static setToken(token: string): void {
+    console.warn(
+      '⚠️ SECURITY WARNING: Storing token in localStorage is not secure. Consider using httpOnly cookies or in-memory storage.'
+    );
+
+    if (typeof window === 'undefined') {
+      console.warn('Cannot access localStorage in server environment');
       return;
     }
 
     try {
-      const serializedTokens = JSON.stringify({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        tokenExpiry: tokens.tokenExpiry.toISOString(),
-      });
-
-      localStorage.setItem(STORAGE_KEY, serializedTokens);
+      localStorage.setItem(this.TOKEN_KEY, token);
     } catch (error) {
-      console.error('Failed to store tokens:', error);
-      // Fail silently to prevent app crashes
+      console.error('Failed to store token in localStorage:', error);
     }
   }
 
   /**
-   * Retrieve stored authentication tokens
+   * Get token from localStorage
    */
-  static retrieve(): StoredTokens | null {
-    if (!isStorageAvailable()) return null;
+  static getToken(): string | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
 
     try {
-      const storedData = localStorage.getItem(STORAGE_KEY);
-
-      if (!storedData) {
-        return null;
-      }
-
-      const parsed = JSON.parse(storedData);
-
-      // Validate required fields
-      if (!parsed.accessToken || !parsed.refreshToken || !parsed.tokenExpiry) {
-        return null;
-      }
-
-      return {
-        accessToken: parsed.accessToken,
-        refreshToken: parsed.refreshToken,
-        tokenExpiry: new Date(parsed.tokenExpiry),
-      };
+      return localStorage.getItem(this.TOKEN_KEY);
     } catch (error) {
-      console.error('Failed to retrieve tokens:', error);
+      console.error('Failed to retrieve token from localStorage:', error);
       return null;
     }
   }
 
   /**
-   * Clear stored tokens
+   * Remove token from localStorage
    */
-  static clear(): void {
-    if (!isStorageAvailable()) return;
+  static removeToken(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
 
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(this.TOKEN_KEY);
     } catch (error) {
-      console.error('Failed to clear tokens:', error);
+      console.error('Failed to remove token from localStorage:', error);
     }
   }
 
   /**
-   * Check if stored tokens are expired
+   * Check if token exists and is valid format
    */
-  static isExpired(tokens: StoredTokens): boolean {
-    return new Date() >= tokens.tokenExpiry;
+  static hasToken(): boolean {
+    const token = this.getToken();
+    return token !== null && token.trim().length > 0;
   }
 
   /**
-   * Check if tokens need refresh (within 2 minutes of expiry)
+   * Validate token format (basic JWT structure check)
    */
-  static needsRefresh(tokens: StoredTokens): boolean {
-    const refreshThreshold = 2 * 60 * 1000; // 2 minutes in milliseconds
-    return new Date().getTime() + refreshThreshold >= tokens.tokenExpiry.getTime();
+  static isValidJWT(token: string): boolean {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return false;
+
+      // Try to decode the payload to check expiration
+      const payloadPart = parts[1];
+      if (!payloadPart) return false;
+
+      // Check if atob is available (browser environment)
+      if (typeof atob === 'undefined') {
+        console.warn('atob not available, skipping token expiration check');
+        return true; // Assume valid if we can't check
+      }
+
+      const payload = JSON.parse(atob(payloadPart));
+
+      // Check if token is expired
+      if (payload.exp && payload.exp < Date.now() / 1000) {
+        console.warn('Token is expired');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Invalid JWT format:', error);
+      return false;
+    }
   }
 
   /**
-   * Get access token if valid, null if expired or missing
+   * Store user data
    */
-  static getValidAccessToken(): string | null {
-    const tokens = this.retrieve();
+  static setUserData(userData: any): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
 
-    if (!tokens || this.isExpired(tokens)) {
+    try {
+      localStorage.setItem(this.USER_KEY, JSON.stringify(userData));
+    } catch (error) {
+      console.error('Failed to store user data:', error);
+    }
+  }
+
+  /**
+   * Get user data
+   */
+  static getUserData(): any | null {
+    if (typeof window === 'undefined') {
       return null;
     }
 
-    return tokens.accessToken;
+    try {
+      const userData = localStorage.getItem(this.USER_KEY);
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Failed to retrieve user data:', error);
+      return null;
+    }
   }
 
   /**
-   * Get refresh token if available
+   * Clear all stored data
    */
-  static getRefreshToken(): string | null {
-    const tokens = this.retrieve();
-    return tokens?.refreshToken || null;
+  static clearAll(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem(this.USER_KEY);
+    } catch (error) {
+      console.error('Failed to clear localStorage:', error);
+    }
+  }
+}
+
+// Export both for backward compatibility, but recommend SecureTokenManager
+export const TokenStorage = LocalStorageTokenManager; // Deprecated
+export const SecureTokenStorage = SecureTokenManager; // Recommended
+
+/**
+ * Utility functions for token validation
+ */
+export function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+
+    const payloadPart = parts[1];
+    if (!payloadPart) return true;
+
+    // Check if atob is available (browser environment)
+    if (typeof atob === 'undefined') {
+      console.warn('atob not available, cannot check token expiration');
+      return false; // Assume not expired if we can't check
+    }
+
+    const payload = JSON.parse(atob(payloadPart));
+    return payload.exp && payload.exp < Date.now() / 1000;
+  } catch {
+    return true;
+  }
+}
+
+export function getTokenExpirationTime(token: string): number | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const payloadPart = parts[1];
+    if (!payloadPart) return null;
+
+    // Check if atob is available (browser environment)
+    if (typeof atob === 'undefined') {
+      console.warn('atob not available, cannot get token expiration');
+      return null;
+    }
+
+    const payload = JSON.parse(atob(payloadPart));
+    return payload.exp || null;
+  } catch {
+    return null;
   }
 }

@@ -1,288 +1,169 @@
-import { writable, get } from 'svelte/store';
-import { OAuth2Client } from '$lib/api/clients/oauth';
-import { TokenStorage } from '$lib/utils/token-storage';
+/**
+ * Authentication Store - Server-Side Enhanced
+ * Now uses server-provided user data instead of localStorage for security
+ */
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
-  tokenExpiry: Date | null;
-  isLoading: boolean;
-  error: string | null;
-  intendedDestination: string | null;
-  isCheckingAuth: boolean;
-}
+import { writable, derived } from 'svelte/store';
+import { browser } from '$app/environment';
+import { goto } from '$app/navigation';
 
 export interface User {
-  id: string;
   email: string;
-  username?: string;
-}
-
-export interface LoginCredentials {
   username: string;
-  password: string;
+  name: string;
+  nickname: string;
+  'external-id': string;
+  'is-confirmed': boolean;
+  'is-two-factor-sessions-enforced': boolean;
 }
 
-export interface TokenData {
-  accessToken: string;
-  refreshToken: string;
-  tokenExpiry: Date;
+export interface SessionInfo {
+  isDemo: boolean;
+  expiresAt: string;
 }
 
-// Initial state
-const initialState: AuthState = {
-  isAuthenticated: false,
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  tokenExpiry: null,
-  isLoading: false,
-  error: null,
-  intendedDestination: null,
-  isCheckingAuth: false,
-};
+export interface AuthState {
+  user: User | null;
+  session: SessionInfo | null;
+  isAuthenticated: boolean;
+  isCheckingAuth: boolean;
+  intendedDestination: string | null;
+}
 
-// Create the writable store
-const { subscribe, set, update } = writable<AuthState>(initialState);
+// Create the auth store with server-provided initial data
+function createAuthStore() {
+  const { subscribe, set, update } = writable<AuthState>({
+    user: null,
+    session: null,
+    isAuthenticated: false,
+    isCheckingAuth: false,
+    intendedDestination: null,
+  });
 
-export const authStore = {
-  subscribe,
+  return {
+    subscribe,
 
-  // Reset store to initial state
-  reset: () => {
-    set(initialState);
-  },
+    /**
+     * Initialize auth state with server-provided data
+     * Called from +layout.svelte with data from +layout.server.ts
+     */
+    initialize: (userData: User | null, sessionData: SessionInfo | null) => {
+      update((state) => ({
+        ...state,
+        user: userData,
+        session: sessionData,
+        isAuthenticated: !!userData,
+        isCheckingAuth: false,
+      }));
+    },
 
-  // Set loading state
-  setLoading: (loading: boolean) => {
-    update((state) => ({
-      ...state,
-      isLoading: loading,
-      error: loading ? null : state.error,
-    }));
-  },
+    /**
+     * Update auth state when server data changes
+     */
+    updateFromServer: (userData: User | null, sessionData: SessionInfo | null) => {
+      update((state) => ({
+        ...state,
+        user: userData,
+        session: sessionData,
+        isAuthenticated: !!userData,
+      }));
+    },
 
-  // Set auth checking state
-  setCheckingAuth: (checking: boolean) => {
-    update((state) => ({
-      ...state,
-      isCheckingAuth: checking,
-    }));
-  },
+    /**
+     * Set intended destination for post-login redirect
+     */
+    setIntendedDestination: (path: string) => {
+      update((state) => ({
+        ...state,
+        intendedDestination: path,
+      }));
+    },
 
-  // Set error state
-  setError: (error: string) => {
-    update((state) => ({
-      ...state,
-      error,
-      isLoading: false,
-    }));
-  },
+    /**
+     * Clear intended destination
+     */
+    clearIntendedDestination: () => {
+      update((state) => ({
+        ...state,
+        intendedDestination: null,
+      }));
+    },
 
-  // Set authenticated state
-  setAuthenticated: (user: User, tokens: TokenData) => {
-    update((state) => ({
-      ...state,
-      isAuthenticated: true,
-      user,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      tokenExpiry: tokens.tokenExpiry,
-      isLoading: false,
-      error: null,
-    }));
-  },
+    /**
+     * Set loading state during auth operations
+     */
+    setLoading: (loading: boolean) => {
+      update((state) => ({
+        ...state,
+        isCheckingAuth: loading,
+      }));
+    },
 
-  // Logout
-  logout: () => {
-    // Clear stored tokens
-    TokenStorage.clear();
+    /**
+     * Server-side logout - calls logout API and redirects
+     */
+    logout: async () => {
+      if (!browser) return;
 
-    update((state) => ({
-      ...state,
-      isAuthenticated: false,
-      user: null,
-      accessToken: null,
-      refreshToken: null,
-      tokenExpiry: null,
-      error: null,
-    }));
-  },
-
-  // Secure logout with server-side session invalidation
-  secureLogout: async () => {
-    try {
-      // Get current auth state
-      const currentState = get({ subscribe });
-
-      // If we have an access token, we could invalidate it on the server
-      // For now, we'll just do local logout but this is where server-side
-      // session invalidation would happen in a production environment
-      if (currentState.accessToken) {
-        console.log('Performing secure logout with token cleanup');
-      }
-    } catch (error) {
-      console.warn('Error during secure logout:', error);
-    } finally {
-      // Always perform local logout regardless of server response
-      authStore.logout();
-    }
-  },
-
-  // Set intended destination for post-login redirect
-  setIntendedDestination: (path: string) => {
-    update((state) => ({ ...state, intendedDestination: path }));
-  },
-
-  // Clear intended destination
-  clearIntendedDestination: () => {
-    update((state) => ({ ...state, intendedDestination: null }));
-  },
-
-  // Login method
-  login: async (credentials: LoginCredentials) => {
-    authStore.setLoading(true);
-
-    try {
-      const oauthClient = new OAuth2Client();
-
-      // Authenticate with the API
-      const tokenResponse = await oauthClient.authenticate(credentials);
-
-      // Calculate token expiry
-      const tokenExpiry = new Date(Date.now() + tokenResponse.expires_in * 1000);
-
-      // Store tokens securely
-      TokenStorage.store({
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token,
-        tokenExpiry,
-      });
-
-      // Get user information from session response
-      let user: User;
       try {
-        const userResponse = oauthClient.getUserFromSessionResponse(tokenResponse);
-        user = {
-          id: userResponse.data?.user?.['external-id'] || 'unknown',
-          email: userResponse.data?.user?.email || credentials.username,
-          username: userResponse.data?.user?.username || credentials.username,
-        };
-      } catch (userError) {
-        // If we can't get user info, create a minimal user object
-        console.warn('Failed to get user info:', userError);
-        user = {
-          id: 'unknown',
-          email: credentials.username,
-          username: credentials.username,
-        };
-      }
-
-      // Set authenticated state
-      authStore.setAuthenticated(user, {
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token,
-        tokenExpiry,
-      });
-    } catch (error) {
-      authStore.setError(error instanceof Error ? error.message : 'Authentication failed');
-      throw error;
-    }
-  },
-
-  // Check auth status and handle redirects
-  checkAuthAndRedirect: async () => {
-    authStore.setCheckingAuth(true);
-
-    try {
-      // Check for stored tokens
-      const storedTokens = TokenStorage.retrieve();
-
-      if (!storedTokens) {
-        // No tokens found, user is not authenticated
-        authStore.setCheckingAuth(false);
-        return;
-      }
-
-      // Check if tokens are expired
-      if (TokenStorage.isExpired(storedTokens)) {
-        // Try to refresh tokens
-        const refreshToken = TokenStorage.getRefreshToken();
-        if (refreshToken) {
-          try {
-            const oauthClient = new OAuth2Client();
-            const tokenResponse = await oauthClient.refreshToken(refreshToken);
-
-            // Calculate new token expiry
-            const tokenExpiry = new Date(Date.now() + tokenResponse.expires_in * 1000);
-
-            // Store new tokens
-            TokenStorage.store({
-              accessToken: tokenResponse.access_token,
-              refreshToken: tokenResponse.refresh_token,
-              tokenExpiry,
-            });
-
-            // Set authenticated state with existing user or create minimal user
-            const user: User = {
-              id: 'unknown',
-              email: 'unknown',
-              username: 'unknown',
-            };
-
-            authStore.setAuthenticated(user, {
-              accessToken: tokenResponse.access_token,
-              refreshToken: tokenResponse.refresh_token,
-              tokenExpiry,
-            });
-          } catch (refreshError) {
-            console.warn('Token refresh failed:', refreshError);
-            // Clear invalid tokens
-            TokenStorage.clear();
-            authStore.logout();
-          }
-        } else {
-          // No refresh token, clear expired tokens
-          TokenStorage.clear();
-          authStore.logout();
-        }
-      } else {
-        // Valid tokens found, set authenticated state
-        const user: User = {
-          id: 'unknown',
-          email: 'unknown',
-          username: 'unknown',
-        };
-
-        authStore.setAuthenticated(user, {
-          accessToken: storedTokens.accessToken,
-          refreshToken: storedTokens.refreshToken,
-          tokenExpiry: storedTokens.tokenExpiry,
+        // Call server-side logout endpoint
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
         });
+
+        if (response.ok) {
+          // Clear client state
+          set({
+            user: null,
+            session: null,
+            isAuthenticated: false,
+            isCheckingAuth: false,
+            intendedDestination: null,
+          });
+
+          // Redirect to login
+          await goto('/login', { replaceState: true });
+        } else {
+          console.error('Logout failed:', response.statusText);
+          // Still redirect to login even if API call fails
+          await goto('/login', { replaceState: true });
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+        // Fallback: clear state and redirect anyway
+        set({
+          user: null,
+          session: null,
+          isAuthenticated: false,
+          isCheckingAuth: false,
+          intendedDestination: null,
+        });
+        await goto('/login', { replaceState: true });
       }
+    },
 
-      authStore.setCheckingAuth(false);
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      // Clear potentially corrupted tokens
-      TokenStorage.clear();
-      authStore.logout();
-      authStore.setCheckingAuth(false);
-    }
-  },
+    /**
+     * Clear all auth state (for cleanup)
+     */
+    clear: () => {
+      set({
+        user: null,
+        session: null,
+        isAuthenticated: false,
+        isCheckingAuth: false,
+        intendedDestination: null,
+      });
+    },
+  };
+}
 
-  // Utility methods for token management
-  isTokenExpired: (expiry: Date | null): boolean => {
-    if (!expiry) return true;
-    return new Date() >= expiry;
-  },
+export const auth = createAuthStore();
 
-  needsRefresh: (expiry: Date | null): boolean => {
-    if (!expiry) return true;
-    // Refresh if less than 2 minutes remaining
-    const refreshThreshold = 2 * 60 * 1000; // 2 minutes in milliseconds
-    return new Date().getTime() + refreshThreshold >= expiry.getTime();
-  },
-};
+// Derived stores for common auth checks
+export const isAuthenticated = derived(auth, ($auth) => $auth.isAuthenticated);
+export const currentUser = derived(auth, ($auth) => $auth.user);
+export const isDemo = derived(auth, ($auth) => $auth.session?.isDemo ?? false);

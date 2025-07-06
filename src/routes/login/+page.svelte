@@ -1,21 +1,9 @@
-<script lang="ts">
-  import { browser } from '$app/environment';
-  import { goto } from '$app/navigation';
-  import { onMount } from 'svelte';
-  import { authStore } from '$lib/stores/auth';
+<!-- Login Page -->
+<script>
   import LoginForm from '$lib/components/LoginForm.svelte';
 
-  // Redirect if already authenticated
-  onMount(() => {
-    if (browser) {
-      const unsubscribe = authStore.subscribe((state) => {
-        if (state.isAuthenticated) {
-          goto('/');
-        }
-      });
-      return unsubscribe;
-    }
-  });
+  // Get form data from server action
+  export let form;
 </script>
 
 <svelte:head>
@@ -23,6 +11,8 @@
   <meta name="description" content="Sign in to your Tastytrade account" />
 </svelte:head>
 
-<div class=" flex items-center justify-center p-4">
-  <LoginForm />
+<div class=" flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <LoginForm />
+  </div>
 </div>
