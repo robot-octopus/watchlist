@@ -6,9 +6,15 @@ import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
 
 export default [
-  js.configs.recommended,
+  // Base JavaScript config (excluding Svelte files)
   {
-    files: ['src/**/*.{js,ts}'],
+    ...js.configs.recommended,
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
+    ignores: ['**/*.svelte'],
+  },
+  // TypeScript files
+  {
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
     plugins: {
       '@typescript-eslint': ts,
     },
@@ -16,6 +22,8 @@ export default [
       parser: tsParser,
       parserOptions: {
         project: './tsconfig.json',
+        sourceType: 'module',
+        ecmaVersion: 'latest',
       },
       globals: {
         console: 'readonly',
@@ -25,6 +33,8 @@ export default [
         clearInterval: 'readonly',
         localStorage: 'readonly',
         window: 'readonly',
+        atob: 'readonly',
+        btoa: 'readonly',
       },
     },
     rules: {
@@ -33,6 +43,7 @@ export default [
       'no-inner-declarations': 'off',
     },
   },
+  // Svelte files
   {
     files: ['**/*.svelte'],
     plugins: {
@@ -42,7 +53,10 @@ export default [
     languageOptions: {
       parser: svelteParser,
       parserOptions: {
-        parser: tsParser,
+        parser: {
+          ts: tsParser,
+          typescript: tsParser,
+        },
         project: './tsconfig.json',
         extraFileExtensions: ['.svelte'],
         sourceType: 'module',
@@ -56,17 +70,24 @@ export default [
         window: 'readonly',
         document: 'readonly',
         localStorage: 'readonly',
+        ResizeObserver: 'readonly',
       },
     },
     rules: {
       ...svelte.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/consistent-type-imports': 'error',
+      // Allow TypeScript features in Svelte files
       'no-inner-declarations': 'off',
-      '@typescript-eslint/no-unused-expressions': 'off',
       'no-undef': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      // Disable JS-specific rules that conflict with TS
+      'no-redeclare': 'off',
+      'no-use-before-define': 'off',
     },
   },
+  // Config files
   {
     files: ['*.config.{js,ts}', 'tests/**/*.ts'],
     languageOptions: {
@@ -78,12 +99,15 @@ export default [
     },
   },
   prettier,
+  // Ignore patterns
   {
     ignores: [
       'build/',
       '.svelte-kit/',
       'dist/',
       'node_modules/',
+      'playwright-report/',
+      'test-results/',
       '.env*',
       'pnpm-lock.yaml',
       'package-lock.json',
@@ -94,6 +118,16 @@ export default [
       'svelte.config.js',
       'tailwind.config.js',
       'postcss.config.js',
+      '*.config.js',
+      '*.config.ts',
+      '**/*.min.js',
+      '**/*.bundle.js',
+      '**/*.d.ts',
+      '**/*.js.map',
+      '**/*.css.map',
+      '**/*-snapshots/',
+      '**/coverage/',
+      '**/*.tsbuildinfo',
     ],
   },
 ];

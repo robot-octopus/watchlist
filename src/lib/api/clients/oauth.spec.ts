@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OAuth2Client } from './oauth';
-import type { OAuthTokenResponse, LoginCredentials } from '../types/oauth';
+import type { LoginCredentials } from '../types/oauth';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

@@ -5,10 +5,10 @@
 
 interface AuthRequest {
   cookies: {
-    get: (string) => string | undefined;
+    get: (key: string) => string | undefined;
   };
   headers: {
-    get: (string) => string | null;
+    get: (key: string) => string | null;
   };
 }
 

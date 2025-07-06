@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit';
-import { isProtectedRoute, isPublicRoute } from '$lib/config/routes';
+import { isProtectedRoute } from '$lib/config/routes';
 
 /**
  * Server-side authentication and route protection
@@ -54,14 +54,28 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Check if route requires authentication
   if (isProtectedRoute(pathname)) {
     if (!event.locals.user) {
-      // Store intended destination for post-login redirect
-      event.cookies.set('intended-destination', pathname, {
-        path: '/',
-        maxAge: 60 * 60, // 1 hour
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      });
+      // Filter out system/devtools URLs and API routes from intended destinations
+      const isSystemUrl =
+        pathname.includes('.well-known') ||
+        pathname.includes('favicon') ||
+        pathname.includes('devtools') ||
+        pathname.includes('__data.json') ||
+        pathname.startsWith('/_') ||
+        pathname.startsWith('/api/');
+
+      if (!isSystemUrl) {
+        // Store intended destination for post-login redirect
+        // console.log('🔒 Storing intended destination:', pathname);
+        event.cookies.set('intended-destination', pathname, {
+          path: '/',
+          maxAge: 60 * 60, // 1 hour
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+        });
+      } else {
+        // console.log('🚫 Skipping system URL for intended destination:', pathname);
+      }
 
       // Redirect to login
       throw redirect(303, '/login');
@@ -69,8 +83,16 @@ export const handle: Handle = async ({ event, resolve }) => {
   }
 
   // Redirect authenticated users away from login page
-  if (isPublicRoute(pathname) && pathname === '/login' && event.locals.user) {
-    throw redirect(303, '/');
+  if (pathname === '/login' && event.locals.user) {
+    console.log('🔄 Redirecting authenticated user away from login page to /watchlist');
+    throw redirect(303, '/watchlist');
+  }
+
+  // Debug: log authentication status for login page
+  if (pathname === '/login') {
+    console.log('🔍 Login page access - User authenticated:', !!event.locals.user);
+    console.log('🔍 Session token exists:', !!sessionToken);
+    console.log('🔍 User data exists:', !!userData);
   }
 
   // Add security headers

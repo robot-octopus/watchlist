@@ -20,7 +20,7 @@ test.describe('Navbar - Basic Functionality', () => {
   test('theme toggle button is present and clickable', async ({ page }) => {
     const themeToggle = page.locator('[data-testid="theme-toggle"]');
     await expect(themeToggle).toBeVisible();
-    
+
     // Click should work without errors
     await themeToggle.click();
     await page.waitForTimeout(500);
@@ -29,16 +29,16 @@ test.describe('Navbar - Basic Functionality', () => {
   test('theme icon changes when clicked', async ({ page }) => {
     const themeToggle = page.locator('[data-testid="theme-toggle"]');
     const themeIcon = page.locator('[data-testid="theme-icon"]');
-    
+
     await expect(themeIcon).toBeVisible();
-    
+
     // Get initial icon src
     const initialSrc = await themeIcon.getAttribute('src');
-    
+
     // Click to toggle theme
     await themeToggle.click();
     await page.waitForTimeout(500);
-    
+
     // Icon should have changed
     const newSrc = await themeIcon.getAttribute('src');
     expect(newSrc).not.toBe(initialSrc);
@@ -46,18 +46,18 @@ test.describe('Navbar - Basic Functionality', () => {
 
   test('theme persists across page reloads', async ({ page }) => {
     const themeToggle = page.locator('[data-testid="theme-toggle"]');
-    
+
     // Toggle theme
     await themeToggle.click();
     await page.waitForTimeout(500);
-    
+
     // Get current theme from localStorage
     const themeBeforeReload = await page.evaluate(() => localStorage.getItem('theme'));
-    
+
     // Reload page
     await page.reload();
     await page.waitForLoadState('networkidle');
-    
+
     // Theme should be preserved
     const themeAfterReload = await page.evaluate(() => localStorage.getItem('theme'));
     expect(themeAfterReload).toBe(themeBeforeReload);
@@ -70,4 +70,4 @@ test.describe('Navbar - Basic Functionality', () => {
     await expect(page.locator('[data-testid="theme-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="theme-icon"]')).toBeVisible();
   });
-}); 
+});

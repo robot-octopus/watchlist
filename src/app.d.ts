@@ -1,5 +1,6 @@
-// See https://kit.svelte.dev/docs/types#app
-// for information about these interfaces
+/// <reference types="svelte" />
+/// <reference types="vite/client" />
+
 declare global {
   namespace App {
     // interface Error {}
@@ -22,6 +23,12 @@ declare global {
     // interface PageData {}
     // interface Platform {}
   }
+}
+
+declare module '*.svelte' {
+  import type { SvelteComponent } from 'svelte';
+  const component: SvelteComponent;
+  export default component;
 }
 
 export {};

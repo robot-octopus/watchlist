@@ -30,8 +30,7 @@
         class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg"
       >
         <p class="text-sm text-blue-700 dark:text-blue-300">
-          Welcome back, <strong>{$currentUser.username}</strong>! This is your protected watchlist
-          page.
+          Welcome back, <strong>{$currentUser.username}</strong>
         </p>
       </div>
     {/if}

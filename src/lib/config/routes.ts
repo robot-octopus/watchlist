@@ -6,6 +6,8 @@
 // Routes that don't require authentication
 export const PUBLIC_ROUTES = [
   '/login',
+  '/api/auth/login',
+  '/api/auth/logout',
   // Add other public routes here (e.g., '/signup', '/forgot-password')
 ];
 
@@ -19,7 +21,7 @@ export const PROTECTED_ROUTES = [
 
 // Default redirect paths
 export const DEFAULT_PROTECTED_REDIRECT = '/login';
-export const DEFAULT_LOGIN_REDIRECT = '/';
+export const DEFAULT_LOGIN_REDIRECT = '/watchlist';
 
 /**
  * Check if a route is public (doesn't require authentication)

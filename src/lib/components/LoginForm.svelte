@@ -1,6 +1,7 @@
 <script lang="ts">
   import { validateLoginForm } from '$lib/schemas/auth';
-  import { enhance } from '$app/forms';
+  import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
 
   let credentials = {
     username: '',
@@ -16,6 +17,21 @@
 
   let isLoading = false;
   let errorMessage = '';
+
+  // Debug page loads and navigation
+  onMount(() => {
+    console.log('🔍 Client: LoginForm mounted, URL:', window.location.href);
+
+    const handleBeforeUnload = () => {
+      console.log('⚠️ Client: Page is about to unload/reload from:', window.location.href);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  });
 
   function handleFieldBlur(field) {
     touched[field] = true;
@@ -36,19 +52,16 @@
     validateField();
   }
 
-  function handleFormResponse() {
-    return ({ result }) => {
-      if (result.type === 'failure') {
-        errorMessage = result.data?.error || 'Login failed';
-        isLoading = false;
-      } else if (result.type === 'redirect') {
-        errorMessage = '';
-        isLoading = false;
-      }
-    };
-  }
+  async function handleSignIn() {
+    console.log('🚀 Client: Sign in button clicked');
+    console.log('🔍 Client: Current URL before submission:', window.location.href);
 
-  function handleFormStart() {
+    // Prevent double submission
+    if (isLoading) {
+      console.log('⏸️ Client: Preventing double submission');
+      return;
+    }
+
     isLoading = true;
     errorMessage = '';
 
@@ -61,11 +74,57 @@
     formErrors = { ...formErrors };
 
     if (!isValid) {
+      console.log('❌ Client: Form validation failed');
       isLoading = false;
-      return false;
+      return;
     }
 
-    return true;
+    console.log('✅ Client: Form validation passed, calling login API...');
+
+    try {
+      // Call the login API directly
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('📥 Client: API response:', JSON.stringify(result, null, 2));
+
+      if (result.success && result.redirectTo) {
+        console.log('✅ Client: Login successful, redirecting to:', result.redirectTo);
+        errorMessage = '';
+
+        // Direct navigation with longer delay to ensure cookies are set
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Client: Attempting navigation...');
+            console.log('🍪 Client: Checking if cookies were set...');
+
+            // Force a full page navigation instead of SPA navigation
+            console.log('🌐 Client: Using full page navigation to ensure server-side redirect');
+            window.location.href = result.redirectTo;
+          } catch (error) {
+            console.error('❌ Client: Navigation failed:', error);
+            errorMessage = 'Login successful! Please navigate to /watchlist manually.';
+          }
+        }, 200); // Increased delay to ensure cookies are fully set
+      } else {
+        console.log('❌ Client: Login failed:', result.error);
+        errorMessage = result.error || 'Login failed';
+      }
+    } catch (error) {
+      console.error('❌ Client: Login request failed:', error);
+      errorMessage = 'Network error - please try again';
+    } finally {
+      isLoading = false;
+    }
   }
 </script>
 
@@ -78,12 +137,7 @@
       <p class="text-gray-600 dark:text-gray-300">Sign in to your Tastytrade account</p>
     </div>
 
-    <form
-      method="POST"
-      use:enhance={handleFormResponse}
-      on:submit={() => handleFormStart()}
-      class="space-y-6"
-    >
+    <div class="space-y-6">
       <div class="space-y-2">
         <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
           Username or Email
@@ -192,7 +246,8 @@
       {/if}
 
       <button
-        type="submit"
+        type="button"
+        on:click={handleSignIn}
         class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         disabled={isLoading}
       >
@@ -219,7 +274,7 @@
           Sign In
         {/if}
       </button>
-    </form>
+    </div>
 
     <div class="mt-8 text-center space-y-2">
       <p class="text-xs text-gray-500 dark:text-gray-400">
