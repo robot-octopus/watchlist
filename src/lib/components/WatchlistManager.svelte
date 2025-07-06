@@ -20,9 +20,7 @@
   let selectedWatchlist = null;
   let isEditing = false;
   let editingName = '';
-  let editingGroupName = '';
   let newWatchlistName = '';
-  let newWatchlistGroupName = '';
   let loading = false;
 
   // Stores
@@ -45,7 +43,6 @@
   function startEdit(watchlist) {
     isEditing = true;
     editingName = watchlist.name || '';
-    editingGroupName = watchlist['group-name'] || '';
     selectedWatchlist = watchlist;
   }
 
@@ -53,7 +50,6 @@
   function cancelEdit() {
     isEditing = false;
     editingName = '';
-    editingGroupName = '';
     selectedWatchlist = null;
   }
 
@@ -63,23 +59,16 @@
 
     loading = true;
     try {
-      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.name || '', {
+      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.id || '', {
         name: editingName.trim(),
-        'group-name': editingGroupName.trim() || undefined,
         'watchlist-entries': selectedWatchlist['watchlist-entries'] || [],
       });
 
-      // Debug: Log the update response structure
-      console.log('Updated watchlist response:', updatedWatchlist);
-      console.log('Updated watchlist name:', updatedWatchlist?.name);
-      console.log('Updated watchlist data:', updatedWatchlist?.data);
-
       // Handle nested response structure like in creation
       const watchlistData = updatedWatchlist?.data || updatedWatchlist;
-      console.log('Processed updated watchlist data:', watchlistData);
 
       // Update the watchlists array
-      const index = watchlists.findIndex((w) => w.name === selectedWatchlist?.name);
+      const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
         watchlists[index] = watchlistData;
         watchlists = [...watchlists];
@@ -113,14 +102,7 @@
 
   // Delete watchlist with confirmation
   function confirmDelete(watchlist) {
-    // Debug: Log the watchlist object structure
-    console.log('Watchlist object for deletion:', watchlist);
-    console.log('Available properties:', Object.keys(watchlist));
-
-    // Try different possible property names
-    const watchlistName =
-      watchlist.name || watchlist.title || watchlist.label || 'Unnamed Watchlist';
-    console.log('Using watchlist name:', watchlistName);
+    const watchlistName = watchlist.name || 'Unnamed Watchlist';
 
     const modal = {
       type: 'confirm',
@@ -139,13 +121,31 @@
   async function deleteWatchlist(watchlist) {
     loading = true;
     try {
-      await watchlistClient.deleteWatchlist(watchlist.name || '');
+      const watchlistId = watchlist.id || '';
+
+      if (!watchlistId) {
+        throw new Error('Watchlist ID is empty or undefined');
+      }
+
+      // First, verify the watchlist exists on the server
+      let existsOnServer = false;
+      try {
+        await watchlistClient.getWatchlist(watchlistId);
+        existsOnServer = true;
+      } catch (verifyError) {
+        existsOnServer = false;
+      }
+
+      // Only call delete API if the watchlist exists on the server
+      if (existsOnServer) {
+        await watchlistClient.deleteWatchlist(watchlistId);
+      }
 
       // Remove from watchlists array
-      watchlists = watchlists.filter((w) => w.name !== watchlist.name);
+      watchlists = watchlists.filter((w) => w.id !== watchlist.id);
 
       // Clear selection if this was selected
-      if (selectedWatchlist?.name === watchlist.name) {
+      if (selectedWatchlist?.id === watchlist.id) {
         selectedWatchlist = null;
       }
 
@@ -179,27 +179,19 @@
     try {
       const newWatchlist = {
         name: newWatchlistName.trim(),
-        'group-name': newWatchlistGroupName.trim() || undefined,
         'watchlist-entries': [],
       };
 
       const createdWatchlist = await watchlistClient.createWatchlist(newWatchlist);
 
-      // Debug: Log the actual structure of the created watchlist
-      console.log('Created watchlist response:', createdWatchlist);
-      console.log('Watchlist name:', createdWatchlist?.name);
-      console.log('Watchlist data:', createdWatchlist?.data);
-
       // Handle nested response structure like in the server load
       const watchlistData = createdWatchlist?.data || createdWatchlist;
-      console.log('Processed watchlist data:', watchlistData);
 
       // Add to watchlists array
       watchlists = [...watchlists, watchlistData];
 
       // Clear form
       newWatchlistName = '';
-      newWatchlistGroupName = '';
 
       // Show success toast
       const toast = {
@@ -284,9 +276,8 @@
       };
 
       // Update the watchlist via API
-      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.name || '', {
+      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.id || '', {
         name: selectedWatchlist.name,
-        'group-name': selectedWatchlist['group-name'] || undefined,
         'watchlist-entries': Object.values(updatedEntries),
       });
 
@@ -294,7 +285,7 @@
       const watchlistData = updatedWatchlist?.data || updatedWatchlist;
 
       // Update the watchlists array
-      const index = watchlists.findIndex((w) => w.name === selectedWatchlist?.name);
+      const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
         watchlists[index] = watchlistData;
         watchlists = [...watchlists];
@@ -353,9 +344,8 @@
       delete currentEntries[symbol];
 
       // Update the watchlist via API
-      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.name || '', {
+      const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.id || '', {
         name: selectedWatchlist.name,
-        'group-name': selectedWatchlist['group-name'] || undefined,
         'watchlist-entries': Object.values(currentEntries),
       });
 
@@ -363,7 +353,7 @@
       const watchlistData = updatedWatchlist?.data || updatedWatchlist;
 
       // Update the watchlists array
-      const index = watchlists.findIndex((w) => w.name === selectedWatchlist?.name);
+      const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
         watchlists[index] = watchlistData;
         watchlists = [...watchlists];
@@ -410,32 +400,17 @@
   >
     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Create New Watchlist</h3>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="space-y-2">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-          Watchlist Name *
-        </label>
-        <input
-          class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          type="text"
-          placeholder="Enter watchlist name..."
-          bind:value={newWatchlistName}
-          disabled={loading}
-        />
-      </div>
-
-      <div class="space-y-2">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-          Group Name (optional)
-        </label>
-        <input
-          class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          type="text"
-          placeholder="Enter group name..."
-          bind:value={newWatchlistGroupName}
-          disabled={loading}
-        />
-      </div>
+    <div class="space-y-2">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+        Watchlist Name *
+      </label>
+      <input
+        class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+        type="text"
+        placeholder="Enter watchlist name..."
+        bind:value={newWatchlistName}
+        disabled={loading}
+      />
     </div>
 
     <div class="flex justify-end">
@@ -481,41 +456,27 @@
         <p class="text-gray-600 dark:text-gray-300">Create your first watchlist to get started!</p>
       </div>
     {:else}
-      {#each watchlists as watchlist, index (watchlist.name)}
+      {#each watchlists as watchlist, index (watchlist.id)}
         <div
-          class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border transition-all cursor-pointer {selectedWatchlist?.name ===
-          watchlist.name
+          class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border transition-all cursor-pointer {selectedWatchlist?.id ===
+          watchlist.id
             ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-xl'}"
           transition:slide={{ duration: 200 }}
         >
-          {#if isEditing && selectedWatchlist?.name === watchlist.name}
+          {#if isEditing && selectedWatchlist?.id === watchlist.id}
             <!-- Edit Mode -->
             <div class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="space-y-2">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                    Name *
-                  </label>
-                  <input
-                    class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    type="text"
-                    bind:value={editingName}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div class="space-y-2">
-                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                    Group Name
-                  </label>
-                  <input
-                    class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    type="text"
-                    bind:value={editingGroupName}
-                    disabled={loading}
-                  />
-                </div>
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Name *
+                </label>
+                <input
+                  class="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  type="text"
+                  bind:value={editingName}
+                  disabled={loading}
+                />
               </div>
 
               <div class="flex justify-end space-x-3">
@@ -580,9 +541,6 @@
                     {watchlist.name || 'Unnamed Watchlist'}
                   </h4>
                   <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-300">
-                    {#if watchlist['group-name']}
-                      <span>Group: {watchlist['group-name']}</span>
-                    {/if}
                     <span>{getSymbolCount(watchlist)} symbols</span>
                     {#if watchlist['order-index']}
                       <span>Order: {watchlist['order-index']}</span>
@@ -626,7 +584,7 @@
             </div>
 
             <!-- Symbols Preview -->
-            {#if selectedWatchlist?.name === watchlist.name}
+            {#if selectedWatchlist?.id === watchlist.id}
               <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600" transition:slide>
                 <h5 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                   Symbols ({getSymbolCount(watchlist)})

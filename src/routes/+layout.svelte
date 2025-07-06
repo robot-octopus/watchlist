@@ -192,4 +192,42 @@
     background-color: #b91c1c !important;
     border-color: #b91c1c !important;
   }
+
+  /* Toast Styling */
+  :global(.toast) {
+    background: white !important;
+    color: #374151 !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.5rem !important;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  :global(.dark .toast) {
+    background: #1f2937 !important;
+    color: #d1d5db !important;
+    border-color: #374151 !important;
+  }
+
+  /* Success Toast */
+  :global(.toast.variant-filled-success) {
+    background: #059669 !important;
+    color: white !important;
+    border-color: #047857 !important;
+  }
+
+  /* Error Toast */
+  :global(.toast.variant-filled-error) {
+    background: #dc2626 !important;
+    color: white !important;
+    border-color: #b91c1c !important;
+  }
+
+  /* Warning Toast */
+  :global(.toast.variant-filled-warning) {
+    background: #d97706 !important;
+    color: white !important;
+    border-color: #b45309 !important;
+  }
 </style>
