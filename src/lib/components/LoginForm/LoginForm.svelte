@@ -18,13 +18,8 @@
   let isLoading = false;
   let errorMessage = '';
 
-  // Debug page loads and navigation
   onMount(() => {
-    console.log('🔍 Client: LoginForm mounted, URL:', window.location.href);
-
-    const handleBeforeUnload = () => {
-      console.log('⚠️ Client: Page is about to unload/reload from:', window.location.href);
-    };
+    const handleBeforeUnload = () => {};
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
@@ -53,12 +48,7 @@
   }
 
   async function handleSignIn() {
-    console.log('🚀 Client: Sign in button clicked');
-    console.log('🔍 Client: Current URL before submission:', window.location.href);
-
-    // Prevent double submission
     if (isLoading) {
-      console.log('⏸️ Client: Preventing double submission');
       return;
     }
 
@@ -74,15 +64,11 @@
     formErrors = { ...formErrors };
 
     if (!isValid) {
-      console.log('❌ Client: Form validation failed');
       isLoading = false;
       return;
     }
 
-    console.log('✅ Client: Form validation passed, calling login API...');
-
     try {
-      // Call the login API directly
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -95,32 +81,21 @@
       });
 
       const result = await response.json();
-      console.log('📥 Client: API response:', JSON.stringify(result, null, 2));
 
       if (result.success && result.redirectTo) {
-        console.log('✅ Client: Login successful, redirecting to:', result.redirectTo);
         errorMessage = '';
 
-        // Direct navigation with longer delay to ensure cookies are set
         setTimeout(async () => {
           try {
-            console.log('🔄 Client: Attempting navigation...');
-            console.log('🍪 Client: Checking if cookies were set...');
-
-            // Force a full page navigation instead of SPA navigation
-            console.log('🌐 Client: Using full page navigation to ensure server-side redirect');
             window.location.href = result.redirectTo;
           } catch (error) {
-            console.error('❌ Client: Navigation failed:', error);
             errorMessage = 'Login successful! Please navigate to /watchlist manually.';
           }
-        }, 200); // Increased delay to ensure cookies are fully set
+        }, 200);
       } else {
-        console.log('❌ Client: Login failed:', result.error);
         errorMessage = result.error || 'Login failed';
       }
     } catch (error) {
-      console.error('❌ Client: Login request failed:', error);
       errorMessage = 'Network error - please try again';
     } finally {
       isLoading = false;
@@ -279,6 +254,9 @@
     <div class="mt-8 text-center space-y-2">
       <p class="text-xs text-gray-500 dark:text-gray-400">
         Use your demo credentials or contact administrator for access
+      </p>
+      <p class="text-xs text-blue-600 dark:text-blue-400 font-medium">
+        Demo Mode: username "demo", password "demo"
       </p>
     </div>
   </div>

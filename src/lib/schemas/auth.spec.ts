@@ -27,7 +27,7 @@ describe('Auth Schema Validation', () => {
       expect(result.success).toBe(false);
 
       if (!result.success) {
-        expect(result.error.errors[0]?.message).toBe('Please enter a valid email address');
+        expect(result.error.errors[0]?.message).toBe('Please enter a valid username');
       }
     });
 
@@ -111,7 +111,7 @@ describe('Auth Schema Validation', () => {
       const result = validateLoginForm(invalidData);
 
       expect(result.success).toBe(false);
-      expect(result.errors.username).toBe('Please enter a valid email address');
+      expect(result.errors.username).toBe('Please enter a valid username');
       expect(result.errors.password).toBe('Password is required');
     });
 

@@ -1,51 +1,39 @@
-<!-- Watchlist Table Component -->
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { slide } from 'svelte/transition';
   import { browser } from '$app/environment';
 
-  // Skeleton UI imports
   import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
 
-  // Import API clients
   import { WatchlistsClient } from '$lib/api/clients/watchlists';
   import { QuotesClient } from '$lib/api/clients/quotes';
 
-  // Import components
-  import SymbolSearchInput from './SymbolSearchInput.svelte';
+  import SymbolSearch from '../SymbolLookup/SymbolSearch.svelte';
 
-  // Props
   export let watchlists = [];
   export let sessionToken = '';
 
-  // State
   let selectedWatchlist = null;
   let quotes = [];
   let isLoading = false;
   let newWatchlistName = '';
-  let quotesClient = null; // Initialize as null, create in browser only
-  let editingWatchlistId = null; // Track which watchlist is being edited
-  let editingName = ''; // Store the name being edited
-  let hasMarketDataAccess = true; // Track if user has market data access
+  let quotesClient = null;
+  let editingWatchlistId = null;
+  let editingName = '';
+  let hasMarketDataAccess = true;
 
-  // Stores
   const modalStore = getModalStore();
   const toastStore = getToastStore();
 
-  // Event dispatcher
   const dispatch = createEventDispatcher();
 
-  // Watchlist client
   $: watchlistClient = new WatchlistsClient({ authToken: sessionToken });
 
-  // Lifecycle
   onMount(() => {
-    // Only create QuotesClient in browser
     if (browser) {
       quotesClient = new QuotesClient();
 
-      // Auto-select first watchlist if available
       if (watchlists.length > 0 && !selectedWatchlist) {
         selectWatchlist(watchlists[0]);
       }
@@ -58,36 +46,28 @@
     }
   });
 
-  // Handle watchlist selection
   async function selectWatchlist(watchlist) {
     selectedWatchlist = watchlist;
 
-    // Only proceed if we have a quotes client (browser context)
     if (!quotesClient) return;
 
-    // Stop existing polling
     quotesClient.stopPolling();
 
-    // Get symbols from watchlist
     const symbols = getSymbols(watchlist).map((s) => s.symbol);
 
     if (symbols.length > 0) {
-      // Start polling for quotes
       try {
         await quotesClient.startPolling({
           symbols,
           sessionToken,
-          pollInterval: 5000, // 5 seconds
+          pollInterval: 5000,
           onUpdate: (updatedQuotes) => {
             quotes = updatedQuotes;
           },
           onError: (error) => {
             console.error('Quote polling error:', error);
-
-            // Mark that market data access is not available
             hasMarketDataAccess = false;
 
-            // Show user-friendly error message about account limitations
             const toast = {
               message:
                 'Real-time market data requires upgraded account access. Symbols shown without pricing.',
@@ -99,11 +79,7 @@
         });
       } catch (error) {
         console.error('Failed to start quote polling:', error);
-
-        // Mark that market data access is not available
         hasMarketDataAccess = false;
-
-        // Show account limitation message
         const toast = {
           message:
             'Market data access not available for your account type. Contact Tastytrade for upgrade options.',
@@ -118,14 +94,10 @@
 
     dispatch('select', watchlist);
   }
-
-  // Get symbols array for a watchlist
   function getSymbols(watchlist) {
     if (!watchlist['watchlist-entries']) return [];
     return Object.values(watchlist['watchlist-entries']);
   }
-
-  // Create new watchlist
   async function createWatchlist() {
     if (!newWatchlistName.trim()) return;
 
@@ -162,7 +134,6 @@
     }
   }
 
-  // Delete watchlist with confirmation
   function confirmDeleteWatchlist(watchlist) {
     const watchlistName = watchlist.name || 'Unnamed Watchlist';
 
@@ -170,6 +141,13 @@
       type: 'confirm',
       title: 'Delete Watchlist',
       body: `Are you sure you want to delete "${watchlistName}"? This action cannot be undone.`,
+      buttonTextCancel: 'Cancel',
+      buttonTextConfirm: 'Delete',
+      modalClasses: 'dark:!bg-gray-800 dark:!text-white',
+      backdropClasses: 'dark:bg-black/60',
+      regionHeader: 'dark:text-white dark:border-gray-600',
+      regionBody: 'dark:text-gray-200',
+      regionFooter: 'dark:border-gray-600',
       response: (confirmed) => {
         if (confirmed) {
           deleteWatchlist(watchlist);
@@ -179,19 +157,16 @@
     modalStore.trigger(modal);
   }
 
-  // Start editing a watchlist name
   function startEditWatchlist(watchlist) {
     editingWatchlistId = watchlist.id;
     editingName = watchlist.name || '';
   }
 
-  // Cancel editing
   function cancelEditWatchlist() {
     editingWatchlistId = null;
     editingName = '';
   }
 
-  // Save edited watchlist name
   async function saveEditWatchlist(watchlist) {
     if (!editingName.trim()) return;
 
@@ -202,19 +177,16 @@
         'watchlist-entries': watchlist['watchlist-entries'] || [],
       });
 
-      // Update the watchlists array
       const index = watchlists.findIndex((w) => w.id === watchlist.id);
       if (index >= 0) {
         watchlists[index] = updatedWatchlist;
         watchlists = [...watchlists];
       }
 
-      // Update selectedWatchlist if this was the selected one
       if (selectedWatchlist?.id === watchlist.id) {
         selectedWatchlist = updatedWatchlist;
       }
 
-      // Clear editing state
       cancelEditWatchlist();
 
       const toast = {
@@ -238,7 +210,6 @@
     }
   }
 
-  // Delete watchlist
   async function deleteWatchlist(watchlist) {
     isLoading = true;
     try {
@@ -248,7 +219,6 @@
         throw new Error('Watchlist ID is empty or undefined');
       }
 
-      // Check if watchlist exists on server
       let existsOnServer = false;
       try {
         await watchlistClient.getWatchlist(watchlistId);
@@ -257,15 +227,12 @@
         existsOnServer = false;
       }
 
-      // Only call delete API if the watchlist exists on the server
       if (existsOnServer) {
         await watchlistClient.deleteWatchlist(watchlistId);
       }
 
-      // Remove from watchlists array
       watchlists = watchlists.filter((w) => w.id !== watchlist.id);
 
-      // Clear selection if this was selected
       if (selectedWatchlist?.id === watchlist.id) {
         selectedWatchlist = null;
         quotes = [];
@@ -292,7 +259,6 @@
     }
   }
 
-  // Handle symbol selection from search
   async function handleSymbolSelect(event) {
     const { symbol, data } = event.detail;
 
@@ -309,7 +275,6 @@
     await addSymbolToWatchlist(symbol, data);
   }
 
-  // Add symbol to selected watchlist
   async function addSymbolToWatchlist(symbol, symbolData) {
     if (!selectedWatchlist) return;
 
@@ -342,14 +307,12 @@
         'watchlist-entries': Object.values(updatedEntries),
       });
 
-      // Update the watchlists array
       const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
         watchlists[index] = updatedWatchlist;
         watchlists = [...watchlists];
       }
 
-      // Update selectedWatchlist
       selectedWatchlist = updatedWatchlist;
       await selectWatchlist(selectedWatchlist);
 
@@ -371,13 +334,18 @@
       isLoading = false;
     }
   }
-
-  // Remove symbol from watchlist
   function confirmRemoveSymbol(symbol) {
     const modal = {
       type: 'confirm',
       title: 'Remove Symbol',
       body: `Are you sure you want to remove ${symbol} from ${selectedWatchlist?.name}?`,
+      buttonTextCancel: 'Cancel',
+      buttonTextConfirm: 'Remove',
+      modalClasses: 'dark:!bg-gray-800 dark:!text-white',
+      backdropClasses: 'dark:bg-black/60',
+      regionHeader: 'dark:text-white dark:border-gray-600',
+      regionBody: 'dark:text-gray-200',
+      regionFooter: 'dark:border-gray-600',
       response: (confirmed) => {
         if (confirmed) {
           removeSymbolFromWatchlist(symbol);
@@ -387,7 +355,6 @@
     modalStore.trigger(modal);
   }
 
-  // Remove symbol from watchlist
   async function removeSymbolFromWatchlist(symbol) {
     if (!selectedWatchlist) return;
 
@@ -401,14 +368,12 @@
         'watchlist-entries': Object.values(currentEntries),
       });
 
-      // Update the watchlists array
       const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
         watchlists[index] = updatedWatchlist;
         watchlists = [...watchlists];
       }
 
-      // Update selectedWatchlist
       selectedWatchlist = updatedWatchlist;
       await selectWatchlist(selectedWatchlist);
 
@@ -431,19 +396,32 @@
     }
   }
 
-  // Get quote for a symbol
   function getQuote(symbol) {
-    return quotes.find((q) => q.symbol === symbol) || {};
+    const quote = quotes.find((q) => q.symbol === symbol);
+    if (!quote) {
+      return {
+        bidPrice: null,
+        askPrice: null,
+        lastPrice: null,
+        bidSize: null,
+        askSize: null,
+        dayVolume: null,
+        status: 'loading',
+      };
+    }
+    return quote;
   }
 
-  // Format price with 2 decimal places
-  function formatPrice(price) {
+  function formatPrice(price, status) {
+    if (status === 'loading') return '...';
+    if (status === 'unavailable' || status === 'error') return '--';
     if (typeof price !== 'number') return '--';
     return price.toFixed(2);
   }
 
-  // Format volume with abbreviations
-  function formatVolume(volume) {
+  function formatVolume(volume, status) {
+    if (status === 'loading') return '...';
+    if (status === 'unavailable' || status === 'error') return '--';
     if (typeof volume !== 'number') return '--';
 
     if (volume >= 1000000) {
@@ -453,10 +431,24 @@
     }
     return volume.toString();
   }
+
+  function getStatusClass(status) {
+    switch (status) {
+      case 'loading':
+        return 'text-blue-600 dark:text-blue-400';
+      case 'success':
+        return 'text-green-600 dark:text-green-400';
+      case 'unavailable':
+        return 'text-yellow-600 dark:text-yellow-400';
+      case 'error':
+        return 'text-red-600 dark:text-red-400';
+      default:
+        return 'text-gray-500 dark:text-gray-400';
+    }
+  }
 </script>
 
 <div class="space-y-6">
-  <!-- Header -->
   <div class="flex justify-between items-center">
     <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Watchlist</h1>
     <div class="flex items-center space-x-4">
@@ -472,16 +464,15 @@
             : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200'} px-3 py-1 rounded-full text-sm font-medium"
         >
           {#if hasMarketDataAccess}
-            Updating every 5s
+            Live quotes updating
           {:else}
-            No market data access
+            Market data unavailable
           {/if}
         </span>
       {/if}
     </div>
   </div>
 
-  <!-- Watchlist Selector -->
   <div
     class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700"
   >
@@ -495,6 +486,13 @@
             title: 'Create New Watchlist',
             body: 'Enter a name for your new watchlist:',
             valueAttr: { type: 'text', placeholder: 'Watchlist name...' },
+            buttonTextCancel: 'Cancel',
+            buttonTextSubmit: 'Submit',
+            modalClasses: 'dark:!bg-gray-800 dark:!text-white',
+            backdropClasses: 'dark:bg-black/60',
+            regionHeader: 'dark:text-white dark:border-gray-600',
+            regionBody: 'dark:text-gray-200',
+            regionFooter: 'dark:border-gray-600',
             response: (name) => {
               if (name) {
                 newWatchlistName = name;
@@ -526,7 +524,6 @@
               : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'}"
           >
             {#if editingWatchlistId === watchlist.id}
-              <!-- Edit Mode -->
               <div class="flex items-center space-x-2 flex-1">
                 <input
                   type="text"
@@ -544,7 +541,6 @@
                 </span>
               </div>
 
-              <!-- Save/Cancel buttons -->
               <button
                 class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 p-1 rounded transition-colors"
                 on:click={() => saveEditWatchlist(watchlist)}
@@ -578,8 +574,6 @@
                 </svg>
               </button>
             {:else}
-              <!-- View Mode -->
-              <!-- Clickable watchlist area -->
               <div
                 class="flex items-center space-x-2 flex-1 cursor-pointer"
                 role="button"
@@ -592,8 +586,6 @@
                   ({Object.values(watchlist['watchlist-entries'] || {}).length})
                 </span>
               </div>
-
-              <!-- Action buttons -->
               <button
                 class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded transition-colors"
                 on:click={() => startEditWatchlist(watchlist)}
@@ -633,18 +625,16 @@
     {/if}
   </div>
 
-  <!-- Selected Watchlist Content -->
   {#if selectedWatchlist}
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
       transition:slide
     >
-      <!-- Add Symbol Section -->
       <div class="p-6 border-b border-gray-200 dark:border-gray-700">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Add Symbol to {selectedWatchlist.name}
         </h3>
-        <SymbolSearchInput
+        <SymbolSearch
           {sessionToken}
           placeholder="Search symbols to add..."
           disabled={isLoading}
@@ -652,7 +642,6 @@
         />
       </div>
 
-      <!-- Quotes Table -->
       <div class="overflow-x-auto">
         <table class="w-full text-sm text-left">
           <thead class="bg-gray-50 dark:bg-gray-700">
@@ -706,33 +695,33 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm text-gray-900 dark:text-white">
-                    ${formatPrice(quote.bidPrice)}
+                  <span class="text-sm {getStatusClass(quote.status)}">
+                    ${formatPrice(quote.bidPrice, quote.status)}
                   </span>
-                  {#if quote.bidSize}
+                  {#if quote.bidSize && quote.status === 'success'}
                     <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                      ({formatVolume(quote.bidSize)})
+                      ({formatVolume(quote.bidSize, quote.status)})
                     </span>
                   {/if}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm text-gray-900 dark:text-white">
-                    ${formatPrice(quote.askPrice)}
+                  <span class="text-sm {getStatusClass(quote.status)}">
+                    ${formatPrice(quote.askPrice, quote.status)}
                   </span>
-                  {#if quote.askSize}
+                  {#if quote.askSize && quote.status === 'success'}
                     <span class="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                      ({formatVolume(quote.askSize)})
+                      ({formatVolume(quote.askSize, quote.status)})
                     </span>
                   {/if}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm font-medium text-gray-900 dark:text-white">
-                    ${formatPrice(quote.lastPrice)}
+                  <span class="text-sm font-medium {getStatusClass(quote.status)}">
+                    ${formatPrice(quote.lastPrice, quote.status)}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="text-sm text-gray-900 dark:text-white">
-                    {formatVolume(quote.dayVolume)}
+                  <span class="text-sm {getStatusClass(quote.status)}">
+                    {formatVolume(quote.dayVolume, quote.status)}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">

@@ -2,10 +2,8 @@ import { json, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-  // Get current session token for API logout (if needed)
   const sessionToken = cookies.get('session-token');
 
-  // Clear authentication cookies
   cookies.delete('session-token', {
     path: '/',
     httpOnly: true,
@@ -19,7 +17,6 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     sameSite: 'strict',
   });
 
-  // Clear intended destination cookie if it exists
   cookies.delete('intended-destination', {
     path: '/',
     httpOnly: true,
@@ -44,15 +41,12 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
     }
   }
 
-  // Check if this is a JSON request (from fetch) or form request
   const contentType = request.headers.get('content-type');
   const acceptHeader = request.headers.get('accept');
 
   if (contentType?.includes('application/json') || acceptHeader?.includes('application/json')) {
-    // Return JSON response for API calls
     return json({ success: true, message: 'Logged out successfully' });
   } else {
-    // Redirect for form submissions
     throw redirect(303, '/login');
   }
 };

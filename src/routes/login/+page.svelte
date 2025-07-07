@@ -1,8 +1,6 @@
-<!-- Login Page -->
 <script>
-  import LoginForm from '$lib/components/LoginForm.svelte';
+  import LoginForm from '$lib/components/LoginForm/LoginForm.svelte';
 
-  // Get form data from server action
   export let form;
 </script>
 

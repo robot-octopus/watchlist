@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TokenStorage } from './token-storage';
-import type { StoredTokens } from './token-storage';
+import { TokenStorage, isTokenExpired, getTokenExpirationTime } from './token-storage';
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -14,98 +13,129 @@ Object.defineProperty(globalThis, 'localStorage', {
   value: mockLocalStorage,
 });
 
+// Mock atob for JWT token parsing
+Object.defineProperty(globalThis, 'atob', {
+  value: vi.fn((str: string) => {
+    // Simple mock for base64 decode
+    if (str === 'eyJleHAiOjk5OTk5OTk5OTl9') {
+      return '{"exp":9999999999}'; // Valid future expiration
+    }
+    if (str === 'eyJleHAiOjEwMDB9') {
+      return '{"exp":1000}'; // Expired token
+    }
+    return '{}';
+  }),
+});
+
 describe('TokenStorage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should store tokens securely', () => {
-    const tokens: StoredTokens = {
-      accessToken: 'access-token-123',
-      refreshToken: 'refresh-token-456',
-      tokenExpiry: new Date('2024-01-01T15:00:00Z'),
-    };
+  it('should store token securely', () => {
+    const token = 'test-session-token-123';
 
-    TokenStorage.store(tokens);
+    TokenStorage.setToken(token);
 
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-      'tastytrade_tokens',
-      expect.stringContaining('access-token-123')
-    );
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('session-token', token);
   });
 
-  it('should retrieve stored tokens', () => {
-    const storedData = JSON.stringify({
-      accessToken: 'access-token-123',
-      refreshToken: 'refresh-token-456',
-      tokenExpiry: '2024-01-01T15:00:00.000Z',
-    });
+  it('should retrieve stored token', () => {
+    const token = 'test-session-token-123';
+    mockLocalStorage.getItem.mockReturnValue(token);
 
-    mockLocalStorage.getItem.mockReturnValue(storedData);
+    const retrievedToken = TokenStorage.getToken();
 
-    const tokens = TokenStorage.retrieve();
-
-    expect(mockLocalStorage.getItem).toHaveBeenCalledWith('tastytrade_tokens');
-    expect(tokens).toEqual({
-      accessToken: 'access-token-123',
-      refreshToken: 'refresh-token-456',
-      tokenExpiry: new Date('2024-01-01T15:00:00Z'),
-    });
+    expect(mockLocalStorage.getItem).toHaveBeenCalledWith('session-token');
+    expect(retrievedToken).toBe(token);
   });
 
-  it('should return null when no tokens stored', () => {
+  it('should return null when no token stored', () => {
     mockLocalStorage.getItem.mockReturnValue(null);
 
-    const tokens = TokenStorage.retrieve();
+    const token = TokenStorage.getToken();
 
-    expect(tokens).toBeNull();
+    expect(token).toBeNull();
   });
 
-  it('should clear stored tokens', () => {
-    TokenStorage.clear();
+  it('should clear stored token', () => {
+    TokenStorage.removeToken();
 
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('tastytrade_tokens');
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('session-token');
   });
 
-  it('should handle corrupted storage data', () => {
-    mockLocalStorage.getItem.mockReturnValue('invalid-json');
+  it('should handle localStorage errors gracefully', () => {
+    mockLocalStorage.getItem.mockImplementation(() => {
+      throw new Error('localStorage error');
+    });
 
-    const tokens = TokenStorage.retrieve();
+    const token = TokenStorage.getToken();
 
-    expect(tokens).toBeNull();
+    expect(token).toBeNull();
   });
 
-  it('should validate token expiry dates', () => {
-    const validTokens: StoredTokens = {
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      tokenExpiry: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
-    };
+  it('should check if token exists', () => {
+    mockLocalStorage.getItem.mockReturnValue('valid-token');
+    expect(TokenStorage.hasToken()).toBe(true);
 
-    const expiredTokens: StoredTokens = {
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      tokenExpiry: new Date(Date.now() - 1000), // 1 second ago
-    };
+    mockLocalStorage.getItem.mockReturnValue(null);
+    expect(TokenStorage.hasToken()).toBe(false);
 
-    expect(TokenStorage.isExpired(validTokens)).toBe(false);
-    expect(TokenStorage.isExpired(expiredTokens)).toBe(true);
+    mockLocalStorage.getItem.mockReturnValue('');
+    expect(TokenStorage.hasToken()).toBe(false);
   });
 
-  it('should check if tokens need refresh', () => {
-    const needsRefresh: StoredTokens = {
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      tokenExpiry: new Date(Date.now() + 60 * 1000), // 1 minute from now
-    };
+  it('should validate JWT format', () => {
+    // Valid JWT structure with future expiration
+    const validJWT = 'header.eyJleHAiOjk5OTk5OTk5OTl9.signature';
+    expect(TokenStorage.isValidJWT(validJWT)).toBe(true);
 
-    const noRefreshNeeded: StoredTokens = {
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      tokenExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes from now
-    };
+    // Expired JWT
+    const expiredJWT = 'header.eyJleHAiOjEwMDB9.signature';
+    expect(TokenStorage.isValidJWT(expiredJWT)).toBe(false);
 
-    expect(TokenStorage.needsRefresh(needsRefresh)).toBe(true);
-    expect(TokenStorage.needsRefresh(noRefreshNeeded)).toBe(false);
+    // Invalid JWT structure
+    expect(TokenStorage.isValidJWT('invalid-jwt')).toBe(false);
+    expect(TokenStorage.isValidJWT('header.payload')).toBe(false);
+  });
+
+  it('should store and retrieve user data', () => {
+    const userData = { id: '123', email: 'test@example.com' };
+
+    TokenStorage.setUserData(userData);
+
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('user-data', JSON.stringify(userData));
+
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(userData));
+
+    const retrievedData = TokenStorage.getUserData();
+    expect(retrievedData).toEqual(userData);
+  });
+
+  it('should clear all stored data', () => {
+    TokenStorage.clearAll();
+
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('session-token');
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('user-data');
+  });
+});
+
+describe('Token utility functions', () => {
+  it('should check if token is expired', () => {
+    const validJWT = 'header.eyJleHAiOjk5OTk5OTk5OTl9.signature';
+    const expiredJWT = 'header.eyJleHAiOjEwMDB9.signature';
+
+    expect(isTokenExpired(validJWT)).toBe(false);
+    expect(isTokenExpired(expiredJWT)).toBe(true);
+    expect(isTokenExpired('invalid-token')).toBe(true);
+  });
+
+  it('should get token expiration time', () => {
+    const validJWT = 'header.eyJleHAiOjk5OTk5OTk5OTl9.signature';
+    const expiredJWT = 'header.eyJleHAiOjEwMDB9.signature';
+
+    expect(getTokenExpirationTime(validJWT)).toBe(9999999999);
+    expect(getTokenExpirationTime(expiredJWT)).toBe(1000);
+    expect(getTokenExpirationTime('invalid-token')).toBeNull();
   });
 });

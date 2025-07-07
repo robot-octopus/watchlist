@@ -22,21 +22,13 @@
   }
 </script>
 
-<!-- on:click={(e) => {
-  // Force full page reload to ensure server-side protection
-  e.preventDefault();
-  window.location.href = '/';
-}} -->
-
 <nav class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex justify-between items-center h-16">
       <div class="flex items-center">
         <a href="/" class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-          <picture>
-            <source srcset={logo_dark} media="(prefers-color-scheme: dark)" />
-            <img src={logo_light} alt="Tastytrade" class="h-8 w-auto" />
-          </picture>
+          <img src={logo_light} alt="Tastytrade" class="h-8 w-auto block dark:hidden" />
+          <img src={logo_dark} alt="Tastytrade" class="h-8 w-auto hidden dark:block" />
         </a>
       </div>
 

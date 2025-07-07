@@ -9,11 +9,11 @@
   // Import the WatchlistsClient
   import { WatchlistsClient } from '$lib/api/clients/watchlists';
 
-  // Import the SymbolSearchInput component
-  import SymbolSearchInput from './SymbolSearchInput.svelte';
+  // Import the SymbolSearch component
+  import SymbolSearch from '../SymbolLookup/SymbolSearch.svelte';
 
-  // Import the StreamingChart component
-  import StreamingChart from './StreamingChart.svelte';
+  // Import the StreamingChart component (create mock)
+  import StreamingChart from '../StreamingChart.svelte';
 
   // Props
   export let watchlists = [];
@@ -111,6 +111,13 @@
       type: 'confirm',
       title: 'Delete Watchlist',
       body: `Are you sure you want to delete "${watchlistName}"? This action cannot be undone.`,
+      buttonTextCancel: 'Cancel',
+      buttonTextConfirm: 'Delete',
+      modalClasses: 'dark:!bg-gray-800 dark:!text-white',
+      backdropClasses: 'dark:bg-black/60',
+      regionHeader: 'dark:text-white dark:border-gray-600',
+      regionBody: 'dark:text-gray-200',
+      regionFooter: 'dark:border-gray-600',
       response: (confirmed) => {
         if (confirmed) {
           deleteWatchlist(watchlist);
@@ -325,6 +332,13 @@
       type: 'confirm',
       title: 'Remove Symbol',
       body: `Are you sure you want to remove ${symbol} from ${selectedWatchlist.name}?`,
+      buttonTextCancel: 'Cancel',
+      buttonTextConfirm: 'Remove',
+      modalClasses: 'dark:!bg-gray-800 dark:!text-white',
+      backdropClasses: 'dark:bg-black/60',
+      regionHeader: 'dark:text-white dark:border-gray-600',
+      regionBody: 'dark:text-gray-200',
+      regionFooter: 'dark:border-gray-600',
       response: (confirmed) => {
         if (confirmed) {
           performRemoveSymbol(symbol);
@@ -334,38 +348,30 @@
     modalStore.trigger(modal);
   }
 
-  // Perform the actual symbol removal
   async function performRemoveSymbol(symbol) {
     if (!selectedWatchlist) return;
 
     loading = true;
     try {
-      // Get current watchlist entries
       const currentEntries = selectedWatchlist['watchlist-entries'] || {};
 
-      // Remove the symbol
       delete currentEntries[symbol];
 
-      // Update the watchlist via API
       const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.id || '', {
         name: selectedWatchlist.name,
         'watchlist-entries': Object.values(currentEntries),
       });
 
-      // Handle nested response structure
       const watchlistData = updatedWatchlist?.data || updatedWatchlist;
 
-      // Update the watchlists array
       const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
         watchlists[index] = watchlistData;
         watchlists = [...watchlists];
       }
 
-      // Update selectedWatchlist
       selectedWatchlist = watchlistData;
 
-      // Show success toast
       const toast = {
         message: `Removed ${symbol} from ${selectedWatchlist.name}!`,
         background: 'variant-filled-success',
@@ -387,7 +393,6 @@
 </script>
 
 <div class="space-y-6">
-  <!-- Header -->
   <div class="flex justify-between items-center">
     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Watchlist Manager</h2>
     <span
@@ -397,7 +402,6 @@
     </span>
   </div>
 
-  <!-- Create New Watchlist Card -->
   <div
     class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-lg border border-gray-200 dark:border-gray-700 space-y-4"
   >
@@ -448,7 +452,6 @@
     </div>
   </div>
 
-  <!-- Watchlists List -->
   <div class="space-y-4">
     {#if watchlists.length === 0}
       <div
@@ -468,7 +471,6 @@
           transition:slide={{ duration: 200 }}
         >
           {#if isEditing && selectedWatchlist?.id === watchlist.id}
-            <!-- Edit Mode -->
             <div class="space-y-4">
               <div class="space-y-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -525,7 +527,6 @@
               </div>
             </div>
           {:else}
-            <!-- View Mode -->
             <div
               class="flex items-center justify-between"
               role="button"
@@ -595,7 +596,7 @@
 
                 <!-- Symbol Search Input -->
                 <div class="mb-4">
-                  <SymbolSearchInput
+                  <SymbolSearch
                     {sessionToken}
                     placeholder="Search symbols to add..."
                     disabled={loading}
@@ -603,7 +604,6 @@
                   />
                 </div>
 
-                <!-- Streaming Chart -->
                 <div class="mb-6">
                   <StreamingChart
                     symbols={getSymbols(watchlist).map((s) => s.symbol)}

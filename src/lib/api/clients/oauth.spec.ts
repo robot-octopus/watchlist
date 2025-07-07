@@ -34,16 +34,15 @@ describe('OAuth2Client', () => {
 
     const result = await client.authenticate(credentials);
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.tastyworks.com/sessions',
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: expect.stringContaining('"login":"test@example.com"'),
-      })
-    );
+    expect(mockFetch).toHaveBeenCalledWith('https://api.tastyworks.com/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'User-Agent': 'TastytradeWatchlistApp/1.0',
+      },
+      body: '{"login":"test@example.com","password":"password123","remember-me":false}',
+    });
 
     expect(result).toEqual({
       access_token: 'session-token-123',
@@ -75,16 +74,15 @@ describe('OAuth2Client', () => {
 
     const result = await client.refreshToken('refresh-token-456');
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.tastyworks.com/sessions',
-      expect.objectContaining({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: expect.stringContaining('"remember-token":"refresh-token-456"'),
-      })
-    );
+    expect(mockFetch).toHaveBeenCalledWith('https://api.tastyworks.com/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'User-Agent': 'TastytradeWatchlistApp/1.0',
+      },
+      body: '{"remember-token":"refresh-token-456"}',
+    });
 
     expect(result).toEqual({
       access_token: 'new-session-token',
@@ -100,6 +98,7 @@ describe('OAuth2Client', () => {
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
+      text: async () => '{"error":{"message":"Invalid credentials"}}',
     });
 
     const credentials: LoginCredentials = {
@@ -107,7 +106,7 @@ describe('OAuth2Client', () => {
       password: 'wrongpassword',
     };
 
-    await expect(client.authenticate(credentials)).rejects.toThrow('Authentication failed');
+    await expect(client.authenticate(credentials)).rejects.toThrow('Invalid credentials');
   });
 
   it('should throw error on refresh token failure', async () => {
@@ -115,10 +114,11 @@ describe('OAuth2Client', () => {
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
+      text: async () => '{"error":{"message":"Invalid refresh token"}}',
     });
 
     await expect(client.refreshToken('invalid-refresh-token')).rejects.toThrow(
-      'Token refresh failed'
+      'Invalid refresh token'
     );
   });
 
@@ -171,7 +171,22 @@ describe('OAuth2Client', () => {
     const result = client.getUserFromSessionResponse(mockDemoResponse);
 
     expect(result.data.user.email).toBe('demo@example.com');
-    expect(result.data.user.username).toBe(process.env.DEMO_USERNAME || 'DemoUser');
+    expect(result.data.user.username).toBe('demo');
     expect(result.data.user.name).toBe('Demo User');
+  });
+
+  it('should handle demo credentials', async () => {
+    const credentials: LoginCredentials = {
+      username: 'demo',
+      password: 'demo',
+    };
+
+    const result = await client.authenticate(credentials);
+
+    expect(result.access_token).toMatch(/^demo-session-token-/);
+    expect(result.refresh_token).toMatch(/^demo-remember-token-/);
+    expect(result.token_type).toBe('Bearer');
+    expect(result.expires_in).toBe(900);
+    expect(result.scope).toBe('read write');
   });
 });

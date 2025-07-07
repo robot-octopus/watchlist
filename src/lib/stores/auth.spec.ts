@@ -1,96 +1,124 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { authStore } from './auth';
-import type { AuthState } from './auth';
+import { auth } from './auth';
+import type { AuthState, User, SessionInfo } from './auth';
 
 describe('Auth Store', () => {
   beforeEach(() => {
-    authStore.reset();
+    auth.clear();
   });
 
   it('should initialize with unauthenticated state', () => {
-    const state = get(authStore) as AuthState;
+    const state = get(auth) as AuthState;
 
     expect(state.isAuthenticated).toBe(false);
     expect(state.user).toBeNull();
-    expect(state.accessToken).toBeNull();
-    expect(state.refreshToken).toBeNull();
-    expect(state.tokenExpiry).toBeNull();
-    expect(state.isLoading).toBe(false);
-    expect(state.error).toBeNull();
+    expect(state.session).toBeNull();
+    expect(state.isCheckingAuth).toBe(false);
+    expect(state.intendedDestination).toBeNull();
   });
 
   it('should set loading state during authentication', () => {
-    authStore.setLoading(true);
+    auth.setLoading(true);
 
-    const state = get(authStore) as AuthState;
-    expect(state.isLoading).toBe(true);
-    expect(state.error).toBeNull();
+    const state = get(auth) as AuthState;
+    expect(state.isCheckingAuth).toBe(true);
   });
 
-  it('should set authenticated state with OAuth2 tokens', () => {
-    const mockUser = { id: '123', email: 'test@example.com' };
-    const mockTokens = {
-      accessToken: 'access-token-123',
-      refreshToken: 'refresh-token-456',
-      tokenExpiry: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes from now
+  it('should set authenticated state with user and session data', () => {
+    const mockUser: User = {
+      email: 'test@example.com',
+      username: 'testuser',
+      name: 'Test User',
+      nickname: 'Test',
+      'external-id': '123',
+      'is-confirmed': true,
+      'is-two-factor-sessions-enforced': false,
+    };
+    const mockSession: SessionInfo = {
+      isDemo: false,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     };
 
-    authStore.setAuthenticated(mockUser, mockTokens);
+    auth.initialize(mockUser, mockSession);
 
-    const state = get(authStore) as AuthState;
+    const state = get(auth) as AuthState;
     expect(state.isAuthenticated).toBe(true);
     expect(state.user).toEqual(mockUser);
-    expect(state.accessToken).toBe(mockTokens.accessToken);
-    expect(state.refreshToken).toBe(mockTokens.refreshToken);
-    expect(state.tokenExpiry).toEqual(mockTokens.tokenExpiry);
-    expect(state.isLoading).toBe(false);
-    expect(state.error).toBeNull();
+    expect(state.session).toEqual(mockSession);
+    expect(state.isCheckingAuth).toBe(false);
   });
 
-  it('should clear state on logout', () => {
+  it('should clear state on logout', async () => {
     // First authenticate
-    authStore.setAuthenticated(
-      { id: '123', email: 'test@example.com' },
-      { accessToken: 'token', refreshToken: 'refresh', tokenExpiry: new Date() }
-    );
+    const mockUser: User = {
+      email: 'test@example.com',
+      username: 'testuser',
+      name: 'Test User',
+      nickname: 'Test',
+      'external-id': '123',
+      'is-confirmed': true,
+      'is-two-factor-sessions-enforced': false,
+    };
+    const mockSession: SessionInfo = {
+      isDemo: false,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+    };
 
-    // Then logout
-    authStore.logout();
+    auth.initialize(mockUser, mockSession);
 
-    const state = get(authStore) as AuthState;
+    // Then clear
+    auth.clear();
+
+    const state = get(auth) as AuthState;
     expect(state.isAuthenticated).toBe(false);
     expect(state.user).toBeNull();
-    expect(state.accessToken).toBeNull();
-    expect(state.refreshToken).toBeNull();
-    expect(state.tokenExpiry).toBeNull();
+    expect(state.session).toBeNull();
   });
 
-  it('should set error state', () => {
-    const errorMessage = 'Authentication failed';
+  it('should update from server data', () => {
+    const mockUser: User = {
+      email: 'updated@example.com',
+      username: 'updateduser',
+      name: 'Updated User',
+      nickname: 'Updated',
+      'external-id': '456',
+      'is-confirmed': true,
+      'is-two-factor-sessions-enforced': true,
+    };
+    const mockSession: SessionInfo = {
+      isDemo: true,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    };
 
-    authStore.setError(errorMessage);
+    auth.updateFromServer(mockUser, mockSession);
 
-    const state = get(authStore) as AuthState;
-    expect(state.error).toBe(errorMessage);
-    expect(state.isLoading).toBe(false);
+    const state = get(auth) as AuthState;
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.user).toEqual(mockUser);
+    expect(state.session).toEqual(mockSession);
   });
 
-  it('should check if token is expired', () => {
-    const expiredTime = new Date(Date.now() - 1000); // 1 second ago
-    const validTime = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
+  it('should handle intended destination', () => {
+    const destination = '/dashboard';
 
-    expect(authStore.isTokenExpired(expiredTime)).toBe(true);
-    expect(authStore.isTokenExpired(validTime)).toBe(false);
-    expect(authStore.isTokenExpired(null)).toBe(true);
+    auth.setIntendedDestination(destination);
+
+    let state = get(auth) as AuthState;
+    expect(state.intendedDestination).toBe(destination);
+
+    auth.clearIntendedDestination();
+
+    state = get(auth) as AuthState;
+    expect(state.intendedDestination).toBeNull();
   });
 
-  it('should check if token needs refresh', () => {
-    const needsRefresh = new Date(Date.now() + 60 * 1000); // 1 minute from now
-    const noRefreshNeeded = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+  it('should handle unauthenticated state when user is null', () => {
+    auth.initialize(null, null);
 
-    expect(authStore.needsRefresh(needsRefresh)).toBe(true);
-    expect(authStore.needsRefresh(noRefreshNeeded)).toBe(false);
-    expect(authStore.needsRefresh(null)).toBe(true);
+    const state = get(auth) as AuthState;
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.user).toBeNull();
+    expect(state.session).toBeNull();
   });
 });

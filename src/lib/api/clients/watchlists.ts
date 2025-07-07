@@ -10,7 +10,13 @@ export class WatchlistsClient extends BaseApiClient {
    * Get all watchlists for the user
    */
   async getWatchlists(): Promise<Watchlist[]> {
-    return this.get<Watchlist[]>('/watchlists');
+    const response = await this.get<Watchlist[]>('/watchlists');
+    console.log('=== FULL WATCHLISTS API RESPONSE ===');
+    console.log('Response type:', typeof response);
+    console.log('Response keys:', response ? Object.keys(response) : 'null');
+    console.log('Full response:', JSON.stringify(response, null, 2));
+    console.log('=== END WATCHLISTS RESPONSE ===');
+    return response;
   }
 
   /**

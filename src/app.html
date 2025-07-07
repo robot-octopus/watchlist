@@ -1,13 +1,48 @@
 <!doctype html>
-<html lang="en" class="%sveltekit.theme%">
+<html lang="en" class="dark %sveltekit.theme%">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tastytrade Watchlist</title>
+    <script>
+      // Theme initialization to prevent flash
+      (function () {
+        try {
+          // Get theme from cookie, default to dark
+          const theme =
+            document.cookie
+              .split('; ')
+              .find((row) => row.startsWith('theme-preference='))
+              ?.split('=')[1] || 'dark';
+
+          const isDark = theme === 'dark';
+          const html = document.documentElement;
+
+          // Apply theme classes immediately
+          html.classList.toggle('dark', isDark);
+          html.setAttribute('data-mode', theme);
+          html.setAttribute('data-theme', 'crimson');
+
+          // Set body theme when DOM is ready
+          if (document.body) {
+            document.body.setAttribute('data-theme', 'crimson');
+          } else {
+            document.addEventListener('DOMContentLoaded', function () {
+              document.body.setAttribute('data-theme', 'crimson');
+            });
+          }
+        } catch (error) {
+          // Fallback to dark mode if anything fails
+          document.documentElement.classList.add('dark');
+          document.documentElement.setAttribute('data-mode', 'dark');
+          document.documentElement.setAttribute('data-theme', 'crimson');
+        }
+      })();
+    </script>
     %sveltekit.head%
   </head>
-  <body data-sveltekit-preload-data="hover" data-theme="skeleton">
+  <body data-sveltekit-preload-data="hover" data-theme="crimson">
     <div style="display: contents" class="min-h-screen">%sveltekit.body%</div>
   </body>
 </html>

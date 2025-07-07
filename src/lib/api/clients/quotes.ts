@@ -9,23 +9,24 @@ export interface QuoteData {
   askSize?: number;
   dayVolume?: number;
   lastUpdated?: number;
+  status?: 'loading' | 'unavailable' | 'error' | 'success';
 }
 
 export interface MarketDataResponse {
   symbol: string;
-  instrumentType: string;
-  updatedAt: string;
-  bid?: number;
-  bidSize?: number;
-  ask?: number;
-  askSize?: number;
-  last?: number;
-  volume?: number;
-  open?: number;
-  dayHighPrice?: number;
-  dayLowPrice?: number;
-  close?: number;
-  prevClose?: number;
+  'instrument-type': string;
+  'updated-at': string;
+  bid?: string;
+  'bid-size'?: string;
+  ask?: string;
+  'ask-size'?: string;
+  last?: string;
+  volume?: string;
+  open?: string;
+  'day-high-price'?: string;
+  'day-low-price'?: string;
+  close?: string;
+  'prev-close'?: string;
 }
 
 export interface QuotesPollingOptions {
@@ -44,6 +45,7 @@ export class QuotesClient extends BaseApiClient {
   private onErrorCallback: ((error: Error) => void) | undefined;
   private isPolling = false;
   private currentSymbols: string[] = [];
+  private hasMarketDataError = false;
 
   /**
    * Start polling for quotes for the specified symbols
@@ -56,6 +58,7 @@ export class QuotesClient extends BaseApiClient {
     this.onUpdateCallback = options.onUpdate;
     this.onErrorCallback = options.onError;
     this.currentSymbols = [...options.symbols];
+    this.hasMarketDataError = false;
 
     // Set auth token
     this.setAuthToken(options.sessionToken);
@@ -65,6 +68,7 @@ export class QuotesClient extends BaseApiClient {
     options.symbols.forEach((symbol) => {
       this.quotesMap.set(symbol, {
         symbol,
+        status: 'loading',
         lastUpdated: Date.now(),
       });
     });
@@ -90,6 +94,7 @@ export class QuotesClient extends BaseApiClient {
 
     this.quotesMap.clear();
     this.currentSymbols = [];
+    this.hasMarketDataError = false;
   }
 
   /**
@@ -111,14 +116,17 @@ export class QuotesClient extends BaseApiClient {
         symbol,
         existing || {
           symbol,
+          status: this.hasMarketDataError ? 'unavailable' : 'loading',
           lastUpdated: Date.now(),
         }
       );
     });
     this.quotesMap = newQuotesMap;
 
-    // Fetch new quotes immediately
-    await this.fetchQuotes();
+    // Fetch new quotes immediately if no error
+    if (!this.hasMarketDataError) {
+      await this.fetchQuotes();
+    }
   }
 
   /**
@@ -129,69 +137,146 @@ export class QuotesClient extends BaseApiClient {
   }
 
   /**
-   * Fetch quotes from the REST API
+   * Fetch quotes from the REST API using /market-data/by-type endpoint
    */
   private async fetchQuotes(): Promise<void> {
-    if (!this.isPolling || this.currentSymbols.length === 0) {
+    if (!this.isPolling || this.currentSymbols.length === 0 || this.hasMarketDataError) {
       return;
     }
 
     try {
-      // The Tastytrade API doesn't appear to have a public REST endpoint for real-time market data
-      // The documented endpoints are:
-      // - /api-quote-tokens (for streaming setup - returns 404 for some accounts)
-      // - /market-metrics (for volatility data, not real-time quotes)
-      // - positions endpoint with include-marks (only for symbols you own)
+      console.log(`Attempting to fetch quotes for symbols: ${this.currentSymbols.join(', ')}`);
 
-      console.warn(
-        'Real-time market data REST API not available. Consider using streaming or upgrading account access.'
-      );
+      // Build query parameters for market data endpoint
+      // All symbols are assumed to be equities for now
+      const equitySymbols = this.currentSymbols.join(',');
+      const endpoint = `/market-data/by-type?equity=${encodeURIComponent(equitySymbols)}`;
 
-      // Create placeholder quote data to prevent errors
-      const placeholderQuotes: MarketDataResponse[] = this.currentSymbols.map((symbol) => ({
-        symbol,
-        instrumentType: 'Stock',
-        updatedAt: new Date().toISOString(),
-        // No price data - will show as "--" in the UI
-      }));
+      console.log(`Making request to: ${endpoint}`);
 
-      // Process the placeholder response
-      this.processMarketDataResponse(placeholderQuotes);
+      // Make the API request
+      const response = await this.get<{ data: { items: MarketDataResponse[] } }>(endpoint);
+
+      console.log('Market data response received successfully:', response);
+
+      // Process the response
+      if (response?.data?.items) {
+        this.processMarketDataResponse(response.data.items);
+      } else {
+        // No data returned, set status to unavailable
+        this.setAllSymbolsStatus('unavailable');
+      }
 
       // Notify callback
       if (this.onUpdateCallback) {
         this.onUpdateCallback(this.getCurrentQuotes());
       }
-    } catch (error) {
-      console.error('Failed to fetch quotes:', error);
-      if (this.onErrorCallback) {
-        this.onErrorCallback(error as Error);
+    } catch (error: any) {
+      console.error('Failed to fetch market data:', error);
+
+      // Check if this is a server error (500) or API limitation
+      if (error.statusCode === 500) {
+        console.log('Market data endpoint returned 500 - likely not available in production yet');
+        this.hasMarketDataError = true;
+        this.setAllSymbolsStatus('unavailable');
+
+        if (this.onErrorCallback) {
+          this.onErrorCallback(
+            new Error(
+              'Market data REST endpoint not available. Real-time quotes require streaming access or account upgrade.'
+            )
+          );
+        }
+      } else if (error.statusCode === 401) {
+        console.log('Market data endpoint requires authentication or account upgrade');
+        this.hasMarketDataError = true;
+        this.setAllSymbolsStatus('unavailable');
+
+        if (this.onErrorCallback) {
+          this.onErrorCallback(
+            new Error(
+              'Market data access requires account upgrade. Contact Tastytrade for real-time quote access.'
+            )
+          );
+        }
+      } else {
+        this.setAllSymbolsStatus('error');
+        if (this.onErrorCallback) {
+          this.onErrorCallback(error as Error);
+        }
       }
+    }
+  }
+
+  /**
+   * Set status for all symbols
+   */
+  private setAllSymbolsStatus(status: 'loading' | 'unavailable' | 'error' | 'success'): void {
+    this.currentSymbols.forEach((symbol) => {
+      const existing = this.quotesMap.get(symbol);
+      if (existing) {
+        const updated: QuoteData = {
+          symbol: existing.symbol,
+          status,
+          lastUpdated: Date.now(),
+        };
+
+        // Only set properties that have values
+        if (existing.bidPrice !== undefined) updated.bidPrice = existing.bidPrice;
+        if (existing.askPrice !== undefined) updated.askPrice = existing.askPrice;
+        if (existing.lastPrice !== undefined) updated.lastPrice = existing.lastPrice;
+        if (existing.bidSize !== undefined) updated.bidSize = existing.bidSize;
+        if (existing.askSize !== undefined) updated.askSize = existing.askSize;
+        if (existing.dayVolume !== undefined) updated.dayVolume = existing.dayVolume;
+
+        this.quotesMap.set(symbol, updated);
+      }
+    });
+
+    // Notify callback with updated status
+    if (this.onUpdateCallback) {
+      this.onUpdateCallback(this.getCurrentQuotes());
     }
   }
 
   /**
    * Process market data response and update quotes map
    */
-  private processMarketDataResponse(data: MarketDataResponse[]): void {
-    data.forEach((item) => {
+  private processMarketDataResponse(items: MarketDataResponse[]): void {
+    items.forEach((item) => {
       const existing = this.quotesMap.get(item.symbol);
       if (!existing) return;
 
       const updated: QuoteData = {
         ...existing,
+        status: 'success',
         lastUpdated: Date.now(),
       };
 
-      // Update quote data
-      if (item.bid !== undefined) updated.bidPrice = item.bid;
-      if (item.ask !== undefined) updated.askPrice = item.ask;
-      if (item.last !== undefined) updated.lastPrice = item.last;
-      if (item.bidSize !== undefined) updated.bidSize = item.bidSize;
-      if (item.askSize !== undefined) updated.askSize = item.askSize;
-      if (item.volume !== undefined) updated.dayVolume = item.volume;
+      // Update quote data - convert strings to numbers
+      if (item.bid !== undefined) updated.bidPrice = parseFloat(item.bid);
+      if (item.ask !== undefined) updated.askPrice = parseFloat(item.ask);
+      if (item.last !== undefined) updated.lastPrice = parseFloat(item.last);
+      if (item['bid-size'] !== undefined) updated.bidSize = parseFloat(item['bid-size']);
+      if (item['ask-size'] !== undefined) updated.askSize = parseFloat(item['ask-size']);
+      if (item.volume !== undefined) updated.dayVolume = parseFloat(item.volume);
 
       this.quotesMap.set(item.symbol, updated);
+    });
+
+    // Mark any symbols not in response as unavailable
+    this.currentSymbols.forEach((symbol) => {
+      const hasData = items.some((item) => item.symbol === symbol);
+      if (!hasData) {
+        const existing = this.quotesMap.get(symbol);
+        if (existing && existing.status === 'loading') {
+          this.quotesMap.set(symbol, {
+            ...existing,
+            status: 'unavailable',
+            lastUpdated: Date.now(),
+          });
+        }
+      }
     });
   }
 
@@ -200,7 +285,7 @@ export class QuotesClient extends BaseApiClient {
    */
   private startPollingTimer(): void {
     this.pollingTimer = setInterval(() => {
-      if (this.isPolling) {
+      if (this.isPolling && !this.hasMarketDataError) {
         this.fetchQuotes();
       }
     }, this.pollInterval);

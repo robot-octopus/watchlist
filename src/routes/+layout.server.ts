@@ -4,6 +4,9 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
   // Get intended destination from cookie
   const intendedDestination = cookies.get('intended-destination');
 
+  // Get theme preference from cookie, default to dark
+  const themePreference = cookies.get('theme-preference') || 'dark';
+
   // Make user data from server hooks available to all pages
   return {
     user: locals.user,
@@ -14,5 +17,6 @@ export const load: LayoutServerLoad = async ({ locals, cookies }) => {
         }
       : null,
     intendedDestination, // Pass intended destination to client
+    themePreference, // Pass theme preference to client
   };
 };

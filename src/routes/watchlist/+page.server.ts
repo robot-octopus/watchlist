@@ -3,7 +3,6 @@ import { WatchlistsClient } from '$lib/api/clients/watchlists';
 
 export const load: PageServerLoad = async ({ cookies }) => {
   try {
-    // Get the session token from cookies
     const sessionToken = cookies.get('session-token');
 
     if (!sessionToken) {
@@ -14,12 +13,10 @@ export const load: PageServerLoad = async ({ cookies }) => {
       };
     }
 
-    // Create watchlist client pointing to real Tastytrade API
     const watchlistClient = new WatchlistsClient({
       authToken: sessionToken,
     });
 
-    // Fetch all watchlists
     const watchlistsResponse = await watchlistClient.getWatchlists();
 
     return {
@@ -27,7 +24,6 @@ export const load: PageServerLoad = async ({ cookies }) => {
       sessionToken,
     };
   } catch (error) {
-    // Return empty arrays on error so page still renders
     return {
       watchlists: [],
       sessionToken: cookies.get('session-token') || '',

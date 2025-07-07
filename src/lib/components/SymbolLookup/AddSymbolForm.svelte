@@ -3,11 +3,16 @@
   import { validator } from '@felte/validator-zod';
   import { addSymbolSchema } from '$lib/schemas/symbol';
   import { reporter, ValidationMessage } from '@felte/reporter-svelte';
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher();
 
   const { form } = createForm({
     extend: [validator({ schema: addSymbolSchema }), reporter()],
     onSubmit: (values) => {
       console.log('Adding symbol', values.symbol);
+      dispatch('add', { symbol: values.symbol });
+      document.querySelector('input[name="symbol"]').value = '';
     },
   });
 </script>

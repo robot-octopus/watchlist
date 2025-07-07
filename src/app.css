@@ -27,4 +27,128 @@
   .modal-transition {
     @apply transition-all duration-200;
   }
+
+  /* Skeleton UI Modal Dark Mode Overrides */
+  .modal-background {
+    @apply dark:bg-gray-800;
+  }
+
+  .modal-title {
+    @apply dark:text-white;
+  }
+
+  .modal-body {
+    @apply dark:text-gray-200;
+  }
+
+  /* Override Skeleton UI modal component styles for dark mode */
+  :global(.modal-component .modal-title) {
+    @apply dark:text-white;
+  }
+
+  :global(.modal-component .modal-body) {
+    @apply dark:text-gray-200;
+  }
+
+  :global(.modal-component .modal-background) {
+    @apply dark:bg-gray-800;
+  }
+
+  :global(.modal-component input) {
+    @apply w-full px-4 py-3 bg-white dark:!bg-gray-700 border border-gray-300 dark:!border-gray-600 rounded-lg text-gray-900 dark:!text-white placeholder-gray-500 dark:!placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 !important;
+  }
+
+  :global(.modal-component input:focus) {
+    @apply !ring-2 !ring-blue-500 !border-transparent !outline-none;
+  }
+
+  :global(.modal-component label) {
+    @apply dark:text-gray-200;
+  }
+
+  :global(.modal-component .btn) {
+    @apply dark:text-white;
+  }
+
+  :global(.modal-component .btn-filled-secondary) {
+    @apply dark:bg-gray-600 dark:hover:bg-gray-500;
+  }
+
+  /* Specific overrides for prompt modal */
+  :global(.modal-component-prompt .modal-title) {
+    @apply dark:text-white;
+  }
+
+  :global(.modal-component-prompt .modal-body) {
+    @apply dark:text-gray-200;
+  }
+
+  :global(.modal-component-prompt input) {
+    @apply w-full px-4 py-3 bg-white dark:!bg-gray-700 border border-gray-300 dark:!border-gray-600 rounded-lg text-gray-900 dark:!text-white placeholder-gray-500 dark:!placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 !important;
+  }
+
+  :global(.modal-component-prompt input:focus) {
+    @apply !ring-2 !ring-blue-500 !border-transparent !outline-none;
+  }
+
+  :global(.modal-component-confirm .modal-title) {
+    @apply dark:text-white;
+  }
+
+  :global(.modal-component-confirm .modal-body) {
+    @apply dark:text-gray-200;
+  }
+
+  /* Additional comprehensive modal overrides */
+  :global(.modal-component *) {
+    @apply dark:text-white;
+  }
+
+  :global(
+    .modal-component h1,
+    .modal-component h2,
+    .modal-component h3,
+    .modal-component h4,
+    .modal-component h5,
+    .modal-component h6
+  ) {
+    @apply dark:text-white;
+  }
+
+  :global(.modal-component p) {
+    @apply dark:text-gray-200;
+  }
+
+  :global(.modal-component div) {
+    @apply dark:text-gray-200;
+  }
+
+  :global(.modal-component span) {
+    @apply dark:text-gray-200;
+  }
+
+  /* Force all modal text to be white in dark mode */
+  :global(.modal-background) {
+    @apply dark:bg-gray-800;
+  }
+
+  :global(.modal-background *) {
+    @apply dark:!text-white;
+  }
+
+  :global(.modal-background p) {
+    @apply dark:!text-gray-200;
+  }
+
+  :global(.modal-background input) {
+    @apply w-full px-4 py-3 bg-white dark:!bg-gray-700 border border-gray-300 dark:!border-gray-600 rounded-lg text-gray-900 dark:!text-white placeholder-gray-500 dark:!placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 !important;
+  }
+
+  :global(.modal-background input:focus) {
+    @apply !ring-2 !ring-blue-500 !border-transparent !outline-none;
+  }
+
+  :global(.modal-background button) {
+    @apply dark:!text-white;
+  }
 }

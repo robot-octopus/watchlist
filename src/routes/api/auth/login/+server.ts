@@ -75,30 +75,25 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     try {
       const oauthClient = new OAuth2Client();
 
-      // Authenticate with Tastytrade API
       const sessionResponse = await oauthClient.authenticate({
         username,
         password,
       });
 
-      // Extract user data from session response
       const userData = oauthClient.getUserFromSessionResponse(sessionResponse);
 
-      // Extract the actual session token from the nested response
       const actualSessionToken =
         (sessionResponse as any).sessionResponse?.data?.['session-token'] ||
         sessionResponse.access_token;
 
-      // Set secure httpOnly cookie for session token
       cookies.set('session-token', actualSessionToken, {
         path: '/',
-        maxAge: 60 * 60 * 24, // 24 hours
+        maxAge: 60 * 60 * 24,
         httpOnly: true,
         secure: true,
         sameSite: 'strict',
       });
 
-      // Set user data cookie (not httpOnly so client can read it)
       cookies.set('user-data', JSON.stringify(userData.data.user), {
         path: '/',
         maxAge: 60 * 60 * 24, // 24 hours
@@ -106,15 +101,12 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         sameSite: 'strict',
       });
 
-      // Check for intended destination from server cookies
       const intendedDestination = cookies.get('intended-destination');
 
       let redirectTarget = '/watchlist';
       if (intendedDestination) {
-        // Clear the intended destination cookie
         cookies.delete('intended-destination', { path: '/' });
 
-        // Filter out system/devtools URLs from redirects
         const isSystemUrl =
           intendedDestination.includes('.well-known') ||
           intendedDestination.includes('favicon') ||
@@ -127,7 +119,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         }
       }
 
-      // Return success data as proper JSON
       return json({
         success: true,
         redirectTo: redirectTarget,
@@ -139,7 +130,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       if (error instanceof Error) {
         errorMessage = error.message;
 
-        // Check for specific Tastytrade error patterns
         if (errorMessage.includes('invalid_credentials')) {
           errorMessage =
             'Invalid username or password. Please check your credentials and try again.';
@@ -150,7 +140,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         }
       }
 
-      // Return error as JSON
       return json(
         {
           success: false,

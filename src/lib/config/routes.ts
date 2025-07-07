@@ -5,15 +5,16 @@
 
 // Routes that don't require authentication
 export const PUBLIC_ROUTES = [
+  '/',
   '/login',
   '/api/auth/login',
   '/api/auth/logout',
+  '/api/theme',
   // Add other public routes here (e.g., '/signup', '/forgot-password')
 ];
 
 // Routes that require authentication
 export const PROTECTED_ROUTES = [
-  '/',
   '/watchlist',
   '/settings',
   // Add other protected routes here

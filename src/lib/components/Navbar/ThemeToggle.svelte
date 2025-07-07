@@ -4,29 +4,45 @@
   import moonIcon from '$lib/assets/moon.svg';
   import sunIcon from '$lib/assets/sun.svg';
 
-  let isDark = $state(false);
+  let isDark = $state(true); // Default to dark
 
   onMount(() => {
     if (browser) {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      isDark = systemPrefersDark;
-      applyTheme();
+      // Sync with current DOM state (theme is already applied by HTML head script)
+      isDark = document.documentElement.classList.contains('dark');
     }
   });
 
   function applyTheme() {
     if (browser) {
       const mode = isDark ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-mode', mode);
       document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.setAttribute('data-mode', mode);
       document.documentElement.setAttribute('data-theme', 'crimson');
       document.body.setAttribute('data-theme', 'crimson');
     }
   }
 
-  function toggleTheme() {
+  async function toggleTheme() {
     isDark = !isDark;
     applyTheme();
+
+    // Save theme preference to cookie
+    if (browser) {
+      try {
+        await fetch('/api/theme', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            theme: isDark ? 'dark' : 'light',
+          }),
+        });
+      } catch (error) {
+        console.error('Failed to save theme preference:', error);
+      }
+    }
   }
 </script>
 

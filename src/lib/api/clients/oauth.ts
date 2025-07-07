@@ -13,16 +13,11 @@ export class OAuth2Client extends BaseApiClient {
    * Note: Tastytrade uses session-based authentication, not OAuth2
    */
   async authenticate(credentials: LoginCredentials): Promise<OAuthTokenResponse> {
-    // Demo mode for testing - check for environment variables
-    const demoUsername = process.env.DEMO_USERNAME;
-    const demoPassword = process.env.DEMO_PASSWORD;
+    // Demo mode for testing - check for environment variables OR common demo credentials
+    const demoUsername = process.env.DEMO_USERNAME || 'demo';
+    const demoPassword = process.env.DEMO_PASSWORD || 'demo';
 
-    if (
-      demoUsername &&
-      demoPassword &&
-      credentials.username === demoUsername &&
-      credentials.password === demoPassword
-    ) {
+    if (credentials.username === demoUsername && credentials.password === demoPassword) {
       // Simulate successful authentication for demo purposes
       const demoResponse: OAuthTokenResponse = {
         access_token: 'demo-session-token-' + Date.now(),
@@ -101,9 +96,21 @@ export class OAuth2Client extends BaseApiClient {
       return oauthResponse;
     } catch (error) {
       if (error instanceof Error) {
+        // If it's a network error (fetch failed), provide a helpful message
+        if (
+          error.message.includes('fetch') ||
+          error.message.includes('network') ||
+          error.message.includes('connect')
+        ) {
+          throw new Error(
+            'Unable to connect to Tastytrade API. Please check your internet connection or try using demo credentials (username: demo, password: demo).'
+          );
+        }
         throw error;
       }
-      throw new Error('Network error during authentication');
+      throw new Error(
+        'Network error during authentication. Try using demo credentials (username: demo, password: demo).'
+      );
     }
   }
 
@@ -203,7 +210,7 @@ export class OAuth2Client extends BaseApiClient {
         data: {
           user: {
             email: 'demo@example.com',
-            username: process.env.DEMO_USERNAME || 'DemoUser',
+            username: 'demo',
             name: 'Demo User',
             nickname: 'Demo',
             'external-id': 'demo-ext-id',
