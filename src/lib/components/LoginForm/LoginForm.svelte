@@ -250,14 +250,5 @@
         {/if}
       </button>
     </div>
-
-    <div class="mt-8 text-center space-y-2">
-      <p class="text-xs text-gray-500 dark:text-gray-400">
-        Use your demo credentials or contact administrator for access
-      </p>
-      <p class="text-xs text-blue-600 dark:text-blue-400 font-medium">
-        Demo Mode: username "demo", password "demo"
-      </p>
-    </div>
   </div>
 </div>
