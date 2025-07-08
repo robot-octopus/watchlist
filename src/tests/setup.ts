@@ -7,12 +7,24 @@ if (typeof global !== 'undefined') {
   global.document = global.document || globalThis.document;
   global.navigator = global.navigator || { userAgent: 'test' };
   global.location = global.location || { href: 'http://localhost:3000' };
+
+  // Ensure DOM is available for tests that need it
+  if (typeof global.document === 'undefined' && typeof document !== 'undefined') {
+    global.document = document;
+  }
 }
 
 // Ensure document.body exists for component mounting
-if (typeof document !== 'undefined' && !document.body) {
-  document.body = document.createElement('body');
-  document.documentElement.appendChild(document.body);
+if (typeof document !== 'undefined' && document.createElement && !document.body) {
+  try {
+    document.body = document.createElement('body');
+    if (document.documentElement) {
+      document.documentElement.appendChild(document.body);
+    }
+  } catch {
+    // Ignore DOM setup errors for tests that don't need DOM access
+    console.debug('DOM setup not available for this test environment');
+  }
 }
 
 // Ensure we're in browser mode for Svelte 5

@@ -96,6 +96,10 @@
   }
   function getSymbols(watchlist) {
     if (!watchlist['watchlist-entries']) return [];
+
+    if (Array.isArray(watchlist['watchlist-entries'])) {
+      return watchlist['watchlist-entries'];
+    }
     return Object.values(watchlist['watchlist-entries']);
   }
   async function createWatchlist() {
@@ -280,9 +284,13 @@
 
     isLoading = true;
     try {
-      const currentEntries = selectedWatchlist['watchlist-entries'] || {};
+      const currentEntries = selectedWatchlist['watchlist-entries'] || [];
 
-      if (currentEntries[symbol]) {
+      const entriesObject = Array.isArray(currentEntries)
+        ? currentEntries.reduce((acc, entry) => ({ ...acc, [entry.symbol]: entry }), {})
+        : currentEntries;
+
+      if (entriesObject[symbol]) {
         const toast = {
           message: `Symbol ${symbol} is already in this watchlist.`,
           background: 'variant-filled-warning',
@@ -297,24 +305,27 @@
         'instrument-type': symbolData['instrument-type'] || 'Stock',
       };
 
-      const updatedEntries = {
-        ...currentEntries,
+      const updatedEntriesObject = {
+        ...entriesObject,
         [symbol]: newEntry,
       };
 
+      const updatedEntries = Object.values(updatedEntriesObject);
+
       const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.id || '', {
         name: selectedWatchlist.name,
-        'watchlist-entries': Object.values(updatedEntries),
+        'watchlist-entries': updatedEntries,
       });
+
+      const watchlistData = updatedWatchlist?.data || updatedWatchlist;
 
       const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
-        watchlists[index] = updatedWatchlist;
+        watchlists[index] = watchlistData;
         watchlists = [...watchlists];
       }
 
-      selectedWatchlist = updatedWatchlist;
-      await selectWatchlist(selectedWatchlist);
+      selectedWatchlist = watchlistData;
 
       const toast = {
         message: `Added ${symbol} to ${selectedWatchlist.name}!`,
@@ -360,22 +371,30 @@
 
     isLoading = true;
     try {
-      const currentEntries = selectedWatchlist['watchlist-entries'] || {};
-      delete currentEntries[symbol];
+      const currentEntries = selectedWatchlist['watchlist-entries'] || [];
+
+      const entriesObject = Array.isArray(currentEntries)
+        ? currentEntries.reduce((acc, entry) => ({ ...acc, [entry.symbol]: entry }), {})
+        : currentEntries;
+
+      delete entriesObject[symbol];
+
+      const updatedEntries = Object.values(entriesObject);
 
       const updatedWatchlist = await watchlistClient.updateWatchlist(selectedWatchlist.id || '', {
         name: selectedWatchlist.name,
-        'watchlist-entries': Object.values(currentEntries),
+        'watchlist-entries': updatedEntries,
       });
+
+      const watchlistData = updatedWatchlist?.data || updatedWatchlist;
 
       const index = watchlists.findIndex((w) => w.id === selectedWatchlist?.id);
       if (index >= 0) {
-        watchlists[index] = updatedWatchlist;
+        watchlists[index] = watchlistData;
         watchlists = [...watchlists];
       }
 
-      selectedWatchlist = updatedWatchlist;
-      await selectWatchlist(selectedWatchlist);
+      selectedWatchlist = watchlistData;
 
       const toast = {
         message: `Removed ${symbol} from ${selectedWatchlist.name}!`,
@@ -537,7 +556,7 @@
                   }}
                 />
                 <span class="text-sm text-gray-500 dark:text-gray-400">
-                  ({Object.values(watchlist['watchlist-entries'] || {}).length})
+                  ({getSymbols(watchlist).length})
                 </span>
               </div>
 
@@ -583,7 +602,7 @@
               >
                 <span class="font-medium">{watchlist.name || 'Unnamed Watchlist'}</span>
                 <span class="text-sm text-gray-500 dark:text-gray-400">
-                  ({Object.values(watchlist['watchlist-entries'] || {}).length})
+                  ({getSymbols(watchlist).length})
                 </span>
               </div>
               <button

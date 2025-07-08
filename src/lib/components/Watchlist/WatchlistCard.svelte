@@ -3,7 +3,7 @@
   import { createEventDispatcher } from 'svelte';
   import { slide } from 'svelte/transition';
   import SymbolSearch from '../SymbolLookup/SymbolSearch.svelte';
-  import StreamingChart from '../StreamingChart.svelte';
+  // StreamingChart removed - not needed
 
   // Props
   export let watchlist;
@@ -196,13 +196,7 @@
           />
         </div>
 
-        <div class="mb-6">
-          <StreamingChart
-            symbols={getSymbols(watchlist).map((s) => s.symbol)}
-            {sessionToken}
-            height={400}
-          />
-        </div>
+        <!-- StreamingChart removed - not needed -->
 
         {#if getSymbolCount(watchlist) > 0}
           <div class="flex flex-wrap gap-2">
